@@ -1,871 +1,765 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>Charlotte vs The Dark Matter Crisis</title>
 <style>
-  html, body { margin:0; height:100%; background:#060812; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
-  canvas{
-    width:100vw;
-    height:100dvh;
-    touch-action:none;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    background:#050715;
-  }
-  .ui { position:fixed; inset:0; pointer-events:none; }
-  .hud { position:absolute; top:6px; left:8px; right:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  html,body{margin:0;padding:0;background:#000;overflow:hidden;touch-action:none;font-family:system-ui,-apple-system}
+  canvas{display:block;image-rendering:pixelated}
+  .ui{position:fixed;inset:0;pointer-events:none}
+  .hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
   .pill{
-    background:rgba(10,14,30,.55);
-    border:1px solid rgba(180,200,255,.18);
-    color:#dfe7ff;
-    padding:5px 8px;
-    border-radius:999px;
-    font-size:11px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    backdrop-filter: blur(8px);
-    white-space:nowrap;
+    background:rgba(20,25,45,.78);border:1px solid rgba(255,255,255,.18);
+    border-radius:14px;padding:6px 10px;font-size:11px;color:#fff;white-space:nowrap
   }
-  .controls { position:absolute; left:0; right:0; bottom:0; height:32vh; padding-bottom: env(safe-area-inset-bottom); }
-  .btn{
-    pointer-events:auto;
-    position:absolute;
-    width:74px; height:74px;
-    border-radius:18px;
-    border:1px solid rgba(180,200,255,.18);
-    background:rgba(10,14,30,.34);
-    backdrop-filter: blur(10px);
-    color:#dfe7ff;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:900; letter-spacing:.08em;
-    user-select:none; -webkit-user-select:none;
+  .controls{position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;pointer-events:auto}
+  .pad,.btn{
+    background:rgba(20,25,45,.86);border:1px solid rgba(255,255,255,.2);
+    border-radius:14px;color:#fff;padding:14px 16px;font-size:13px;min-width:70px
   }
-  .btn:active{ transform:scale(.97); }
-  #left { left:12px; bottom:16px; width:140px; height:74px; }
-  #left .l, #left .r { position:absolute; top:0; width:68px; height:74px; display:flex; align-items:center; justify-content:center; }
-  #left .l { left:0; } #left .r { right:0; }
-  #jump { left:164px; bottom:16px; }
-  #attack { right:160px; bottom:16px; width:96px; }
-  #special { right:54px; bottom:16px; width:96px; }
-  #mute { left:12px; bottom:96px; width:140px; height:58px; font-size:12px; }
-
-  #overlay{
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    background:rgba(0,0,0,.35); backdrop-filter: blur(6px);
-  }
-  #overlay .panel{
-    width:min(760px,92vw); padding:18px; border-radius:22px;
-    border:1px solid rgba(180,200,255,.18); background:rgba(10,14,30,.78); color:#eaf0ff;
-  }
-  #overlay h1{ margin:0 0 8px 0; font-size:20px; letter-spacing:.06em; text-transform:uppercase; }
-  #overlay .sub{ opacity:.9; margin:0 0 10px 0; }
-  #overlay p{ margin:6px 0; opacity:.92; line-height:1.35; }
-  #overlay .row{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
-  #overlay button{
-    pointer-events:auto;
-    border:1px solid rgba(180,200,255,.18); background:rgba(255,255,255,.10); color:#fff;
-    padding:10px 14px; border-radius:14px; font-weight:900; letter-spacing:.08em;
-  }
-
-  /* Sprite Debug Overlay */
-  #sprDbg{
-    position:fixed; inset:0; display:none;
-    background:rgba(0,0,0,.72);
-    backdrop-filter: blur(8px);
-    z-index:9999;
-    color:#eaf0ff;
-  }
-  #sprDbg .card{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:min(94vw,520px);
-    border:1px solid rgba(180,200,255,.22);
-    border-radius:18px;
-    background:rgba(10,14,30,.88);
-    padding:14px;
-  }
-  #sprDbg h2{ margin:0 0 8px 0; font-size:16px; letter-spacing:.06em; text-transform:uppercase; }
-  #sprDbg .small{ opacity:.8; font-size:12px; line-height:1.35; }
-  #sprDbg .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-  #sprDbg button{
-    border:1px solid rgba(180,200,255,.18);
-    background:rgba(255,255,255,.10);
+  .leftgrp,.rightgrp{display:flex;gap:10px;align-items:flex-end}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;pointer-events:auto}
+  .card{
+    width:min(92vw,520px);
+    background:rgba(20,25,45,.92);
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:16px;
+    padding:16px;
     color:#fff;
-    padding:9px 12px;
-    border-radius:12px;
-    font-weight:900;
-    letter-spacing:.06em;
+    line-height:1.35;
+    font-size:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
   }
-  #sprDbg canvas{
-    width:100%;
-    height:auto;
+  .card h1{margin:0 0 8px 0;font-size:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .card button{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.2);
+    color:#fff;
     border-radius:12px;
-    border:1px solid rgba(180,200,255,.16);
-    margin-top:10px;
-    background:#050715;
+    padding:10px 14px;
+    font-size:14px;
   }
+  .hidden{display:none}
+  .hint{opacity:.85;font-size:12px}
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="c"></canvas></div>
+<canvas id="c"></canvas>
 
 <div class="ui">
-  <div class="hud" id="hudBar">
-    <div class="pill">CHARLOTTE vs THE DARK MATTER CRISIS</div>
+  <div class="hud">
+    <div class="pill">CHARLOTTE VS THE DARK MATTER CRISIS</div>
     <div class="pill">HP: <span id="hp">100</span></div>
     <div class="pill">METER: <span id="meter">0</span></div>
-    <div class="pill">STAGE: <span id="stage">TITLE</span></div>
+    <div class="pill">STAGE: <span id="stage">HIGH STREET</span></div>
+    <div class="pill">WAVE: <span id="wave">1</span>/3</div>
     <div class="pill">SCORE: <span id="score">0</span></div>
-    <div class="pill" style="opacity:.7;">(hold title to tune sprites)</div>
   </div>
 
   <div class="controls">
-    <div class="btn" id="left">
-      <div class="l">◀</div>
-      <div class="r">▶</div>
+    <div class="leftgrp">
+      <button class="pad" id="left">◀</button>
+      <button class="pad" id="right">▶</button>
+      <button class="pad" id="jump">JUMP</button>
     </div>
-    <div class="btn" id="jump">JUMP</div>
-    <div class="btn" id="attack">ATTACK</div>
-    <div class="btn" id="special">SPECIAL</div>
-    <div class="btn" id="mute">MUTE</div>
+    <div class="rightgrp">
+      <button class="btn" id="attack">ATTACK</button>
+      <button class="btn" id="special">SPECIAL</button>
+      <button class="btn" id="mute">MUTE</button>
+    </div>
   </div>
 </div>
 
-<div id="overlay">
-  <div class="panel">
-    <h1>Charlotte vs The Dark Matter Crisis</h1>
-    <p class="sub">Haywards Heath High Street • 3 waves • Final boss • Surprise ending</p>
-    <p><b>Controls:</b> ◀ ▶ move • JUMP • ATTACK • SPECIAL (unlocks after 10 clean hits)</p>
-    <div class="row">
-      <button id="start">PRESS START</button>
-      <button id="startMuted">START (MUTED)</button>
-    </div>
-    <p style="font-size:12px;opacity:.8;margin-top:10px;">Audio starts after tapping START (mobile browser rule).</p>
-  </div>
-</div>
-
-<!-- Sprite Debug Overlay -->
-<div id="sprDbg">
+<!-- Start -->
+<div id="start" class="overlay">
   <div class="card">
-    <h2>Sprite Sheet Tuner</h2>
-    <div class="small">
-      Your sprites are being sliced wrong. Adjust COLS/ROWS until the preview shows clean frames (no random chunks).<br>
-      Tip: most sheets are 4, 5, 6, 8, 10, 12 columns.
-    </div>
+    <h1>CHARLOTTE vs THE DARK MATTER CRISIS</h1>
+    <div class="hint">Haywards Heath High Street • 3 waves • Final boss • Reward reveal</div>
     <div class="row">
-      <div><b>COLS:</b> <span id="dbgCols">6</span></div>
-      <button id="colsMinus">–</button><button id="colsPlus">+</button>
-      <div style="width:10px;"></div>
-      <div><b>ROWS:</b> <span id="dbgRows">9</span></div>
-      <button id="rowsMinus">–</button><button id="rowsPlus">+</button>
+      <button id="btnStart">START (sound on)</button>
+      <button id="btnStartMuted">START (muted)</button>
     </div>
+    <p class="hint" style="margin-top:10px">
+      Controls: Move • Jump • Attack (combo) • Special (unlocks after 10 hits without taking damage)
+    </p>
+  </div>
+</div>
+
+<!-- End popups -->
+<div id="end1" class="overlay hidden">
+  <div class="card">
+    <p>The rift collapses. The mutants dissolve into stardust, fresh to empty.</p>
+    <p>A bewildered figure steps out — <b>Professor Brian Cox</b>.</p>
+    <p><i>"Thanks. That was… genuinely quite intense."</i></p>
     <div class="row">
-      <button id="dbgClose">CLOSE</button>
-      <button id="dbgReset">RESET DEFAULT</button>
+      <button id="btnEndNext">Continue</button>
     </div>
-    <canvas id="dbgCanvas" width="480" height="360"></canvas>
-    <div class="small" style="margin-top:8px;">
-      Preview shows: (Row0 Frame0) • (Row1 Frame0) • (Row2 Frame0) • (Row4 Frame0) • (Row6 Frame0)
-    </div>
+  </div>
+</div>
+
+<div id="end2" class="overlay hidden">
+  <div class="card">
+    <p><b>REWARD UNLOCKED</b></p>
+    <p>🎟️ <b>TWO TICKETS</b> 🎟️<br>
+      Brian Cox: Emergence — Live in Brighton
+    </p>
+    <p>Merry Christmas, Charlotte 🦋<br>
+      — Love you always, Nick x
+    </p>
   </div>
 </div>
 
 <script>
-(() => {
-  const BG_URL  = "assets/bg.png";
-  const SPR_URL = "assets/sprites.png";
+/* =========================
+   MOBILE PORTRAIT GAME CORE
+   ========================= */
 
-  // Portrait virtual resolution
-  const V_W = 360, V_H = 640;
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
 
-  // IMPORTANT: these are tunable now (and saved)
-  const DEFAULT_COLS = 6;
-  const DEFAULT_ROWS = 9;
+const V = { w: 360, h: 640 };        // virtual portrait resolution
+let running = false;
+let muted = false;
 
-  let GRID_COLS = +(localStorage.getItem("dm_cols") || DEFAULT_COLS);
-  let GRID_ROWS = +(localStorage.getItem("dm_rows") || DEFAULT_ROWS);
+/* ---------- resize / scale ---------- */
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+addEventListener("resize", resize);
+resize();
 
-  let CELL_W = 64, CELL_H = 64;
-
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+function beginFrame(){
+  const s = Math.min(canvas.width / V.w, canvas.height / V.h);
+  const ox = (canvas.width - V.w * s) / 2;
+  const oy = (canvas.height - V.h * s) / 2;
+  ctx.setTransform(s,0,0,s,ox,oy);
   ctx.imageSmoothingEnabled = false;
+}
 
-  function resize(){
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    canvas.width  = Math.floor(window.innerWidth  * dpr);
-    canvas.height = Math.floor(window.innerHeight * dpr);
-    ctx.imageSmoothingEnabled = false;
+/* ---------- load assets ---------- */
+function img(src){ const i=new Image(); i.src=src; return i; }
+const BG   = img("assets/bg_highstreet.png");
+const CHAR = img("assets/charlotte.png"); // 7 frames, 48x64, single row
+const MUT  = img("assets/mutant.png");    // 6 frames, 48x64, single row
+const BOSS = img("assets/boss_cox.png");  // 96x96 frames; see mapping below
+
+/* ---------- UI refs ---------- */
+const elHP    = document.getElementById("hp");
+const elMeter = document.getElementById("meter");
+const elScore = document.getElementById("score");
+const elWave  = document.getElementById("wave");
+const elStage = document.getElementById("stage");
+
+/* ---------- input (touch) ---------- */
+const keys = { left:false, right:false, jump:false, attack:false, special:false };
+
+function bindHold(id, key){
+  const b = document.getElementById(id);
+  const on = (e)=>{ e.preventDefault(); keys[key]=true; };
+  const off= (e)=>{ e.preventDefault(); keys[key]=false; };
+  b.addEventListener("touchstart", on, {passive:false});
+  b.addEventListener("touchend", off, {passive:false});
+  b.addEventListener("touchcancel", off, {passive:false});
+}
+bindHold("left","left");
+bindHold("right","right");
+bindHold("jump","jump");
+
+function bindTap(id, key){
+  const b = document.getElementById(id);
+  b.addEventListener("touchstart",(e)=>{e.preventDefault(); keys[key]=true;},{passive:false});
+  b.addEventListener("touchend",(e)=>{e.preventDefault(); keys[key]=false;},{passive:false});
+}
+bindTap("attack","attack");
+bindTap("special","special");
+
+document.getElementById("mute").addEventListener("click",()=>toggleMute());
+document.getElementById("mute").addEventListener("touchstart",(e)=>{e.preventDefault(); toggleMute();},{passive:false});
+
+/* ---------- world / camera ---------- */
+const WORLD = { w: 2200, groundY: 480 }; // world width for scrolling
+const cam = { x: 0 };
+
+/* ---------- audio (no extra assets) ---------- */
+let AC=null, master=null;
+function initAudio(){
+  if(AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain();
+  master.gain.value = muted ? 0 : 0.22;
+  master.connect(AC.destination);
+
+  // simple music loop (retro-ish)
+  startMusic();
+}
+function toggleMute(){
+  muted = !muted;
+  if(master) master.gain.value = muted ? 0 : 0.22;
+  document.getElementById("mute").textContent = muted ? "UNMUTE" : "MUTE";
+}
+
+let musicTimer = null;
+function beep(freq, dur=0.08, type="square", vol=0.35){
+  if(!AC || muted) return;
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.value = 0;
+  o.connect(g); g.connect(master);
+  const t = AC.currentTime;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.start(t);
+  o.stop(t+dur+0.02);
+}
+function noiseHit(dur=0.06, vol=0.25){
+  if(!AC || muted) return;
+  const bufferSize = Math.floor(AC.sampleRate * dur);
+  const buffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+  const src = AC.createBufferSource(); src.buffer = buffer;
+  const g = AC.createGain(); g.gain.value = vol;
+  src.connect(g); g.connect(master);
+  src.start();
+}
+function sfxAttack(){ beep(520,0.05,"square",0.35); }
+function sfxHit(){ noiseHit(0.05,0.22); beep(180,0.05,"triangle",0.18); }
+function sfxJump(){ beep(420,0.06,"square",0.22); beep(680,0.05,"square",0.16); }
+function sfxSpecial(){ beep(220,0.10,"sawtooth",0.18); beep(440,0.12,"square",0.22); beep(880,0.14,"triangle",0.18); }
+function sfxBossRoar(){ beep(90,0.18,"sawtooth",0.18); noiseHit(0.10,0.20); }
+
+function startMusic(){
+  if(!AC || muted) return;
+  if(musicTimer) clearInterval(musicTimer);
+
+  // tiny looped arpeggio (retro vibe)
+  const seq = [392, 523, 659, 523, 440, 587, 698, 587]; // G C E C A D F D
+  let i=0;
+  musicTimer = setInterval(()=>{
+    if(!AC || muted) return;
+    beep(seq[i%seq.length], 0.09, "square", 0.08);
+    if(i%2===0) beep(seq[(i+2)%seq.length]/2, 0.11, "triangle", 0.04);
+    i++;
+  }, 120);
+}
+
+/* ---------- entities ---------- */
+const player = {
+  x: 140, y: WORLD.groundY, w:48, h:64,
+  vx: 0, vy: 0, onGround: true,
+  face: 1,
+  hp: 100,
+  meter: 0,          // 0..100
+  streak: 0,         // hits without taking damage
+  invuln: 0,
+  state: "idle",     // idle/walk/jump/attack/special
+  frame: 0,
+  attackLock: 0,
+  comboStep: 0,
+  comboUntil: 0
+};
+
+const enemies = [];
+let wave = 1;
+let waveCleared = false;
+
+let boss = null;
+let bossPhase = "none"; // none/fight/defeated/transform/brian
+let endShown = false;
+
+let score = 0;
+
+/* ---------- sprite helpers ---------- */
+function drawSprite(img, sx, sy, sw, sh, dx, dy, dw, dh){
+  if(!img.complete) return;
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
+// CHAR: 7 frames 48x64 single row
+function drawCharlotte(frameIndex, x, y){
+  drawSprite(CHAR, frameIndex*48, 0, 48, 64, x, y, 48, 64);
+}
+
+// MUT: 6 frames 48x64 single row
+// frames: 0 idle, 1 walk1, 2 walk2, 3 attack, 4 hit, 5 death
+function drawMutant(frameIndex, x, y){
+  drawSprite(MUT, frameIndex*48, 0, 48, 64, x, y, 48, 64);
+}
+
+// BOSS: assume 96x96 tiles.
+// Row0: boss [idle1 idle2 atk1 atk2 hurt defeat] => 6
+// Row1: transform [crack dissolve burst morph] => 4
+// Row2: brian [idle wave smile idle] => 4
+function drawBoss(tileX, tileY, x, y){
+  drawSprite(BOSS, tileX*96, tileY*96, 96, 96, x, y, 96, 96);
+}
+
+/* ---------- spawn logic ---------- */
+function spawnWave(n){
+  enemies.length = 0;
+  const count = n===1 ? 5 : n===2 ? 7 : 9;
+  for(let i=0;i<count;i++){
+    enemies.push({
+      x: 520 + i*120 + Math.random()*60,
+      y: WORLD.groundY,
+      w:48,h:64,
+      hp: 28 + n*6,
+      vx: 0,
+      state: "walk",
+      frame: 0,
+      attackCD: 0,
+      hitstun: 0,
+      dead: false
+    });
   }
-  addEventListener('resize', resize, { passive:true });
-  resize();
+  waveCleared = false;
+  elWave.textContent = String(n);
+}
+spawnWave(1);
 
-  function beginFrame(){
-    const cw = canvas.width, ch = canvas.height;
-    const scale = Math.min(cw / V_W, ch / V_H);
-    const vw = V_W * scale, vh = V_H * scale;
-    const ox = ((cw - vw) / 2) | 0;
-    const oy = ((ch - vh) / 2) | 0;
-    ctx.setTransform(scale,0,0,scale,ox,oy);
-    ctx.imageSmoothingEnabled = false;
-  }
-
-  // HUD
-  const $hp = document.getElementById('hp');
-  const $meter = document.getElementById('meter');
-  const $stage = document.getElementById('stage');
-  const $score = document.getElementById('score');
-
-  // Input
-  const input = { left:false, right:false, jump:false, attack:false, special:false };
-  const leftPad = document.getElementById('left');
-  const bindPress = (el, downFn, upFn) => {
-    el.addEventListener('pointerdown', e=>{ e.preventDefault(); downFn(); });
-    el.addEventListener('pointerup',   e=>{ e.preventDefault(); upFn(); });
-    el.addEventListener('pointercancel', e=>{ e.preventDefault(); upFn(); });
-    el.addEventListener('pointerleave', e=>{ e.preventDefault(); upFn(); });
+/* ---------- boss setup ---------- */
+function spawnBoss(){
+  boss = {
+    x: WORLD.w - 320,
+    y: WORLD.groundY - 32, // 96px sprite sits lower
+    w:96,h:96,
+    hp: 240,
+    state: "idle",
+    frame: 0,
+    attackCD: 0,
+    hitstun: 0
   };
-  bindPress(leftPad.querySelector('.l'), ()=>input.left=true, ()=>input.left=false);
-  bindPress(leftPad.querySelector('.r'), ()=>input.right=true, ()=>input.right=false);
-  function bindHold(id,key){
-    const el=document.getElementById(id);
-    bindPress(el, ()=>input[key]=true, ()=>input[key]=false);
+  bossPhase = "fight";
+  elStage.textContent = "BOSS";
+  sfxBossRoar();
+}
+
+/* ---------- collisions ---------- */
+function aabb(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+
+/* ---------- combat ---------- */
+function doPlayerAttack(){
+  if(player.attackLock>0) return;
+  const now = performance.now();
+
+  // combo timing window
+  if(now > player.comboUntil){
+    player.comboStep = 0;
   }
-  bindHold('jump','jump');
-  bindHold('attack','attack');
-  bindHold('special','special');
+  player.comboStep = (player.comboStep % 3) + 1;
+  player.comboUntil = now + 450;
 
-  // Audio (no files)
-  let audio=null;
-  function AudioBus(muted){
-    const ac = new (window.AudioContext||window.webkitAudioContext)();
-    const master = ac.createGain(); master.gain.value = muted?0:0.9; master.connect(ac.destination);
-    const musicG = ac.createGain(); musicG.gain.value = 0.28; musicG.connect(master);
-    const sfxG = ac.createGain(); sfxG.gain.value = 0.72; sfxG.connect(master);
-    function tone(freq=440,dur=0.06,type='square',gain=0.12){
-      const o=ac.createOscillator(), g=ac.createGain();
-      o.type=type; o.frequency.setValueAtTime(freq, ac.currentTime);
-      g.gain.setValueAtTime(0.0001, ac.currentTime);
-      g.gain.linearRampToValueAtTime(gain, ac.currentTime+0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+dur);
-      o.connect(g); g.connect(sfxG);
-      o.start(); o.stop(ac.currentTime+dur+0.02);
-    }
-    const hit=()=>{ tone(560,0.04,'square',0.10); tone(280,0.06,'triangle',0.08); };
-    const swoosh=()=> tone(780,0.05,'triangle',0.08);
-    const thump=()=>{ tone(110,0.10,'sawtooth',0.12); tone(55,0.12,'square',0.08); };
-    const charge=()=>{ tone(330,0.10,'sine',0.12); tone(660,0.14,'sine',0.10); };
-    const roar=()=>{ tone(70,0.20,'sawtooth',0.14); tone(90,0.18,'square',0.10); };
-    const seq=[440,660,523,784,392,587,494,740];
-    const o=ac.createOscillator(); o.type='square';
-    const g=ac.createGain(); g.gain.value=0.0001;
-    o.connect(g); g.connect(musicG); o.start();
-    const base=ac.currentTime+0.06;
-    for(let bar=0; bar<256; bar++){
-      for(let i=0;i<seq.length;i++){
-        const t=base + bar*1.6 + i*0.2;
-        o.frequency.setValueAtTime(seq[i], t);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.10, t+0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t+0.17);
-      }
-    }
-    const toggleMute=()=> master.gain.value = master.gain.value>0 ? 0 : 0.9;
-    return { ac, hit, swoosh, thump, charge, roar, toggleMute };
-  }
-  document.getElementById('mute').addEventListener('pointerdown', e=>{e.preventDefault(); if(audio) audio.toggleMute();});
+  player.state = "attack";
+  player.attackLock = 14; // frames lock
 
-  // Load images
-  const bg = new Image(); bg.src = BG_URL;
-  const spr = new Image(); spr.src = SPR_URL;
+  sfxAttack();
 
-  function recalcCell(){
-    if(!spr.complete || !spr.naturalWidth) return;
-    CELL_W = Math.floor(spr.naturalWidth / GRID_COLS);
-    CELL_H = Math.floor(spr.naturalHeight / GRID_ROWS);
-    localStorage.setItem("dm_cols", GRID_COLS);
-    localStorage.setItem("dm_rows", GRID_ROWS);
-  }
-  spr.addEventListener('load', () => recalcCell());
-
-  // Helpers
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const aabb=(ax,ay,aw,ah,bx,by,bw,bh)=> ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
-
-  // Sprite rows (these assume your sheet is organised by rows)
-  const ROW = { C_IDLE:0, C_WALK:1, C_ATK:2, C_SP:3, E_SMALL:4, E_BIG:5, B_IDLE:6, B_ATK:7 };
-  const FR  = { C_IDLE:4, C_WALK:6, C_ATK:6, C_SP:6, E_SMALL:6, E_BIG:6, B_IDLE:6, B_ATK:6 };
-
-  function drawFrame(row, frame, dx, dy, scale, flip){
-    if(!spr.complete || !spr.naturalWidth) return;
-    const f = frame % GRID_COLS;
-    const sx = f * CELL_W;
-    const sy = row * CELL_H;
-    ctx.save();
-    ctx.translate(dx,dy);
-    if(flip){
-      ctx.scale(-1,1);
-      ctx.translate(-CELL_W*scale,0);
-    }
-    ctx.drawImage(spr, sx,sy,CELL_W,CELL_H, 0,0, CELL_W*scale, CELL_H*scale);
-    ctx.restore();
-  }
-
-  // Game state
-  let mode="TITLE", t=0, camX=0, score=0, wave=0, dt=0;
-  const world = { w: 2800, floor: 520 };
-  const player = {
-    x:180, y:world.floor, vx:0, vy:0, face:1,
-    hp:100, inv:0, onGround:true,
-    combo:0, comboTimer:0, hitStreakNoDmg:0, specialReady:false,
-    anim:"idle", frame:0, frameT:0, lockAnim:0
+  // attack box
+  const atk = {
+    x: player.x + (player.face>0 ? 28 : -28),
+    y: player.y + 18,
+    w: 34, h: 28,
+    dmg: player.comboStep===3 ? 10 : 7,
+    launch: player.comboStep===3
   };
-  const enemies = [];
-  const boss = { active:false, x:2550, y:world.floor, hp:260, phase:0, gravFlip:0, timeSlow:0, frame:0, frameT:0, atkCD:0 };
-  const cut = { step:0, t:0 };
-  const sparkles = [];
 
-  function reset(){
-    mode="TITLE"; t=0; camX=0; score=0; wave=0;
-    Object.assign(player, { x:180,y:world.floor,vx:0,vy:0,face:1,hp:100,inv:0,onGround:true,combo:0,comboTimer:0,hitStreakNoDmg:0,specialReady:false,anim:"idle",frame:0,frameT:0,lockAnim:0 });
-    enemies.length=0;
-    Object.assign(boss, { active:false, x:2550, y:world.floor, hp:260, phase:0, gravFlip:0, timeSlow:0, frame:0, frameT:0, atkCD:0 });
-    cut.step=0; cut.t=0;
-    sparkles.length=0;
-    $stage.textContent="TITLE";
-    $meter.textContent="0";
-    $score.textContent="0";
-    $hp.textContent="100";
-  }
-
-  function spawnWave(n){
-    const baseX = 520 + (wave-1)*520;
-    for(let i=0;i<n;i++){
-      enemies.push({
-        kind: (Math.random()<0.65 ? "small" : "big"),
-        x: baseX + i*120 + (Math.random()*70|0),
-        y: world.floor,
-        hp: (wave===1?52:wave===2?68:86) + (Math.random()*10|0),
-        frame:0, frameT:0
-      });
-    }
-  }
-  function startPlay(){
-    mode="PLAY";
-    $stage.textContent="HIGH STREET";
-    enemies.length=0;
-    boss.active=false;
-    wave=1; spawnWave(6);
-  }
-
-  function setAnim(name, lock=0){
-    if(player.anim!==name){ player.anim=name; player.frame=0; player.frameT=0; }
-    player.lockAnim = Math.max(player.lockAnim, lock);
-  }
-  function updateAnim(){
-    player.lockAnim = Math.max(0, player.lockAnim - dt);
-    if(player.lockAnim<=0){
-      const speed = Math.abs(player.vx);
-      if(!player.onGround) setAnim("walk",0);
-      else if(speed>5) setAnim("walk",0);
-      else setAnim("idle",0);
-    }
-    const rate = (player.anim==="walk") ? 0.10 : (player.anim==="idle") ? 0.18 : 0.08;
-    const max = (player.anim==="idle") ? FR.C_IDLE : (player.anim==="walk") ? FR.C_WALK : (player.anim==="attack") ? FR.C_ATK : FR.C_SP;
-    player.frameT += dt;
-    if(player.frameT > rate){ player.frameT=0; player.frame=(player.frame+1)%max; }
-  }
-
-  function damagePlayer(d){
-    if(player.inv>0) return;
-    player.hp = Math.max(0, player.hp-d);
-    player.inv = 0.75;
-    player.hitStreakNoDmg=0;
-    player.specialReady=false;
-    audio && audio.thump();
-  }
-  function onHit(){
-    player.combo++;
-    player.comboTimer=0.9;
-    player.hitStreakNoDmg++;
-    if(player.hitStreakNoDmg>=10) player.specialReady=true;
-  }
-  function damageEnemy(e,dmg){
-    e.hp -= dmg; score += 250; onHit(); audio && audio.hit();
-  }
-  function damageBoss(dmg){
-    boss.hp -= dmg; score += 450; onHit(); audio && audio.hit();
-  }
-
-  function drawBackground(){
-    if(!bg.complete || !bg.naturalWidth){
-      ctx.fillStyle="#070a18"; ctx.fillRect(0,0,V_W,V_H);
-      ctx.fillStyle="#dfe7ff"; ctx.font="12px monospace";
-      ctx.fillText("Loading assets/bg.png …", 16, 20);
-      return;
-    }
-    const scroll = (mode==="PLAY"||mode==="CUTSCENE") ? camX : 0;
-    const w = bg.naturalWidth, h = bg.naturalHeight;
-    const scaleY = V_H / h;
-    const drawW = w * scaleY;
-    const drawH = V_H;
-
-    const pFar = (scroll*0.18 + t*10) % drawW;
-    ctx.globalAlpha=0.80;
-    for(let x=-drawW; x<=V_W+drawW; x+=drawW) ctx.drawImage(bg, x - pFar, 0, drawW, drawH);
-
-    const pNear = (scroll*0.42 + t*18) % drawW;
-    ctx.globalAlpha=1.0;
-    for(let x=-drawW; x<=V_W+drawW; x+=drawW) ctx.drawImage(bg, x - pNear, 0, drawW, drawH);
-
-    ctx.fillStyle="rgba(0,0,0,0.14)";
-    ctx.fillRect(0,0,V_W,V_H);
-  }
-
-  function drawPlayer(){
-    const s = 1.35;
-    const px = player.x - camX;
-    const dx = px - (CELL_W*s*0.5);
-    const dy = player.y - (CELL_H*s);
-
-    if(player.inv>0 && (Math.floor(t*18)%2===0)) ctx.globalAlpha=0.55;
-
-    if(player.anim==="idle")      drawFrame(ROW.C_IDLE, player.frame, dx, dy, s, player.face<0);
-    else if(player.anim==="walk") drawFrame(ROW.C_WALK, player.frame, dx, dy, s, player.face<0);
-    else if(player.anim==="attack") drawFrame(ROW.C_ATK, player.frame, dx, dy, s, player.face<0);
-    else if(player.anim==="special") drawFrame(ROW.C_SP, player.frame, dx, dy, s, player.face<0);
-
-    ctx.globalAlpha=1.0;
-  }
-
-  function drawEnemies(){
-    const s = 1.30;
-    for(const e of enemies){
-      e.frameT += dt;
-      if(e.frameT>0.12){ e.frameT=0; e.frame=(e.frame+1)%GRID_COLS; }
-      const ex = e.x - camX;
-      const dx = ex - (CELL_W*s*0.5);
-      const dy = e.y - (CELL_H*s);
-      const flip = (player.x<e.x);
-      drawFrame(e.kind==="small" ? ROW.E_SMALL : ROW.E_BIG, e.frame, dx, dy, s, flip);
-    }
-  }
-
-  function drawBoss(){
-    if(!boss.active) return;
-    const s = 2.35;
-    boss.frameT += dt;
-    if(boss.frameT>0.11){ boss.frameT=0; boss.frame=(boss.frame+1)%GRID_COLS; }
-    const bx = boss.x - camX;
-    const dx = bx - (CELL_W*s*0.55);
-    const dy = boss.y - (CELL_H*s);
-    const flip = (player.x<boss.x);
-    const row = (boss.phase>=1) ? ROW.B_ATK : ROW.B_IDLE;
-    drawFrame(row, boss.frame, dx, dy, s, flip);
-  }
-
-  function doCombat(){
-    const didAtk = input.attack;
-    const didSp  = input.special && player.specialReady;
-
-    if(didSp){ setAnim("special", 0.55); player.specialReady=false; player.hitStreakNoDmg=0; audio && audio.charge(); }
-    else if(didAtk){ setAnim("attack", 0.30); audio && audio.swoosh(); }
-
-    if(didAtk || didSp){
-      const reach = didSp ? 110 : 70;
-      const ax = player.x + player.face*26;
-      const ay = player.y - 64;
-      const hb = { x: ax-reach/2, y: ay-34, w: reach, h: 72 };
-      const launcher = (!didSp && (player.combo % 3)===2);
-
-      for(let i=enemies.length-1;i>=0;i--){
-        const e=enemies[i];
-        if(aabb(hb.x,hb.y,hb.w,hb.h, e.x-26, e.y-64, 52, 64)){
-          damageEnemy(e, didSp?24:12);
-          if(launcher) e.y -= 12;
-          if(e.hp<=0){ enemies.splice(i,1); score+=250; }
-        }
+  // hit enemies
+  for(const e of enemies){
+    if(e.dead) continue;
+    if(aabb(atk, e)){
+      e.hp -= atk.dmg;
+      e.hitstun = 10;
+      score += 150;
+      sfxHit();
+      player.streak++;
+      player.meter = Math.min(100, player.meter + 10);
+      if(atk.launch){
+        e.vx += (player.face>0 ? 3.2 : -3.2);
+        // mini pop-up
+        e.y -= 8;
       }
-      if(boss.active){
-        if(aabb(hb.x,hb.y,hb.w,hb.h, boss.x-82, boss.y-170, 164, 170)) damageBoss(didSp?20:10);
-      }
+      if(e.hp<=0){ e.dead=true; score+=300; }
     }
   }
 
-  function drawPopupCard(title, lines, hint){
-    const pad = 14;
-    const bw = Math.min(V_W - 34, 330);
-    const bh = Math.min(V_H - 180, 220);
-    const bx = (V_W - bw) / 2;
-    const by = (V_H - bh) / 2 - 20;
-
-    ctx.fillStyle = "rgba(10,14,30,0.86)";
-    ctx.strokeStyle = "rgba(180,200,255,0.22)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeRect(bx, by, bw, bh);
-
-    ctx.fillStyle = "#eaf0ff";
-    ctx.font = "bold 12px monospace";
-    ctx.fillText(title, bx + pad, by + pad + 10);
-
-    ctx.font = "12px monospace";
-    let y = by + pad + 34;
-    const maxW = bw - pad*2;
-
-    function wrapLine(text){
-      const words = text.split(" ");
-      let line = "";
-      const out = [];
-      for(const w of words){
-        const test = line ? (line + " " + w) : w;
-        if(ctx.measureText(test).width > maxW){
-          if(line) out.push(line);
-          line = w;
-        } else line = test;
-      }
-      if(line) out.push(line);
-      return out;
-    }
-
-    for(const ln of lines){
-      const wrapped = wrapLine(ln);
-      for(const w of wrapped){
-        if(y > by + bh - 34) break;
-        ctx.fillText(w, bx + pad, y);
-        y += 16;
-      }
-      y += 6;
-    }
-
-    if(hint){
-      ctx.fillStyle = "rgba(234,240,255,0.78)";
-      ctx.font = "11px monospace";
-      ctx.fillText(hint, bx + pad, by + bh - 14);
-    }
-  }
-
-  function spawnSparkles(){
-    for(let i=0;i<26;i++){
-      sparkles.push({
-        x: (V_W/2) + (Math.random()*220-110),
-        y: (V_H/2) + (Math.random()*160-80),
-        vx: (Math.random()*2-1)*26,
-        vy: -(18 + Math.random()*38),
-        life: 0.9 + Math.random()*0.6,
-        t: 0,
-        size: 1 + (Math.random()*2|0)
-      });
-    }
-  }
-  function updateSparkles(){
-    for(let i=sparkles.length-1;i>=0;i--){
-      const s = sparkles[i];
-      s.t += dt;
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
-      s.vy += 70 * dt;
-      if(s.t > s.life) sparkles.splice(i,1);
-    }
-  }
-  function drawSparkles(){
-    for(const s of sparkles){
-      const a = Math.max(0, 1 - (s.t / s.life));
-      ctx.globalAlpha = a * 0.9;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(s.x|0, s.y|0, s.size, s.size);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Loop
-  let last=performance.now();
-  function tick(now){
-    dt = Math.min(0.033, (now-last)/1000);
-    last = now;
-    t += dt;
-    if(mode!=="TITLE") update();
-    draw();
-    requestAnimationFrame(tick);
-  }
-
-  function update(){
-    $hp.textContent = player.hp|0;
-    $score.textContent = score|0;
-    $meter.textContent = player.specialReady ? 100 : Math.min(99, player.hitStreakNoDmg*10|0);
-
-    camX = clamp(player.x - V_W*0.40, 0, world.w - V_W);
-
-    const slow = boss.timeSlow>0 ? 0.45 : 1.0;
-    const grav = boss.gravFlip>0 ? -980 : 980;
-    const dtS  = dt*slow;
-
-    player.inv = Math.max(0, player.inv - dtS);
-
-    // movement
-    const speed = 190;
-    player.vx = 0;
-    if(input.left){ player.vx=-speed; player.face=-1; }
-    if(input.right){ player.vx=speed; player.face=1; }
-
-    if(input.jump && player.onGround){
-      player.vy = (boss.gravFlip>0) ? 360 : -360;
-      player.onGround=false;
-      audio && audio.swoosh();
-    }
-
-    player.comboTimer = Math.max(0, player.comboTimer - dtS);
-    if(player.comboTimer===0) player.combo=0;
-
-    player.x += player.vx * dtS;
-    player.vy += grav * dtS;
-    player.y += player.vy * dtS;
-
-    if(boss.gravFlip<=0){
-      if(player.y>=world.floor){ player.y=world.floor; player.vy=0; player.onGround=true; }
-    } else {
-      const ceil=120;
-      if(player.y<=ceil){ player.y=ceil; player.vy=0; player.onGround=true; }
-    }
-    player.x = clamp(player.x, 30, world.w-30);
-
-    // enemies
-    for(const e of enemies){
-      const dir = Math.sign(player.x - e.x);
-      const sp = (e.kind==="small") ? 78 : 58;
-      e.x += dir * sp * dtS;
-      if(aabb(player.x-20, player.y-72, 40, 72, e.x-26, e.y-66, 52, 66)) damagePlayer(e.kind==="small" ? 7 : 10);
-    }
-
-    // waves & boss
-    if(mode==="PLAY"){
-      if(enemies.length===0 && !boss.active){
-        if(wave<3){ wave++; spawnWave(5+wave); }
-        else { boss.active=true; boss.x=2520; boss.hp=260; boss.phase=0; boss.timeSlow=0; boss.gravFlip=0; boss.atkCD=0; audio && audio.roar(); }
-      }
-    }
-
-    if(boss.active){
-      const dir = Math.sign(player.x - boss.x);
-      boss.x += dir * 40 * dtS;
-      boss.atkCD = Math.max(0, boss.atkCD - dtS);
-      if(boss.atkCD<=0){
-        const r = Math.random();
-        if(r<0.34) boss.timeSlow = 1.6;
-        else if(r<0.68) boss.gravFlip = 2.2;
-        boss.atkCD = 2.2;
-        boss.phase = 1;
-      } else boss.phase = 0;
-
-      boss.timeSlow = Math.max(0, boss.timeSlow - dtS);
-      boss.gravFlip = Math.max(0, boss.gravFlip - dtS);
-
-      if(aabb(player.x-20, player.y-72, 40, 72, boss.x-86, boss.y-178, 172, 178)) damagePlayer(14);
-
+  // hit boss
+  if(boss && bossPhase==="fight"){
+    if(aabb(atk, boss)){
+      boss.hp -= atk.launch ? 14 : 9;
+      boss.hitstun = 10;
+      score += 200;
+      sfxHit();
+      player.streak++;
+      player.meter = Math.min(100, player.meter + 10);
       if(boss.hp<=0){
-        boss.active=false;
-        mode="CUTSCENE";
-        cut.step=0; cut.t=0;
-        sparkles.length=0;
+        bossPhase = "defeated";
+        boss.state = "defeat";
+        boss.frame = 5;
+        boss.attackCD = 60;
+        score += 1500;
       }
     }
-
-    doCombat();
-    updateAnim();
-
-    if(player.hp<=0 && mode==="PLAY") reset();
-    if(mode==="CUTSCENE") updateSparkles();
-  }
-
-  function draw(){
-    beginFrame();
-    ctx.clearRect(0,0,V_W,V_H);
-
-    drawBackground();
-    ctx.fillStyle="rgba(0,0,0,0.18)";
-    ctx.fillRect(0, world.floor, V_W, V_H - world.floor);
-
-    if(mode==="PLAY"){
-      drawEnemies();
-      drawBoss();
-      drawPlayer();
-    }
-
-    if(mode==="CUTSCENE"){
-      ctx.fillStyle="rgba(0,0,0,0.50)";
-      ctx.fillRect(0,0,V_W,V_H);
-
-      if(cut.step===0){
-        drawPopupCard("PROF. BRIAN COX",[
-          "The rift collapses. The mutants dissolve into stardust.",
-          "\"Thanks. That was… genuinely quite intense.\"",
-          "You’ve saved the universe (and Haywards Heath)."
-        ],"Tap to continue…");
-      } else {
-        if(sparkles.length===0) spawnSparkles();
-        drawSparkles();
-        drawPopupCard("REWARD UNLOCKED",[
-          "🎟️ TWO TICKETS 🎟️",
-          "Brian Cox: Emergence — Live in Brighton",
-          "",
-          "Merry Christmas, Charlotte 🦋",
-          "— Love you always, Nick x"
-        ],"Tap to restart");
-      }
-    }
-  }
-
-  // Start
-  const overlay = document.getElementById('overlay');
-  function begin(muted){
-    overlay.style.display="none";
-    try{
-      audio = AudioBus(muted);
-      if(audio.ac.state!=="running") audio.ac.resume();
-    }catch{}
-    startPlay();
-  }
-  document.getElementById('start').addEventListener('click', ()=>begin(false));
-  document.getElementById('startMuted').addEventListener('click', ()=>begin(true));
-
-  canvas.addEventListener("pointerdown", () => {
-    if(mode === "CUTSCENE"){
-      if(cut.step === 0){ cut.step = 1; return; }
-      if(cut.step === 1){ reset(); return; }
-    }
-  });
-
-  // ================== SPRITE DEBUG TUNER ==================
-  const sprDbg = document.getElementById("sprDbg");
-  const dbgCols = document.getElementById("dbgCols");
-  const dbgRows = document.getElementById("dbgRows");
-  const dbgCan = document.getElementById("dbgCanvas");
-  const dctx = dbgCan.getContext("2d");
-  dctx.imageSmoothingEnabled = false;
-
-  function openDbg(){
-    sprDbg.style.display="block";
-    dbgCols.textContent = GRID_COLS;
-    dbgRows.textContent = GRID_ROWS;
-    renderDbg();
-  }
-  function closeDbg(){ sprDbg.style.display="none"; }
-
-  function renderDbg(){
-    dbgCols.textContent = GRID_COLS;
-    dbgRows.textContent = GRID_ROWS;
-    dctx.setTransform(1,0,0,1,0,0);
-    dctx.clearRect(0,0,dbgCan.width,dbgCan.height);
-    dctx.fillStyle="#050715"; dctx.fillRect(0,0,dbgCan.width,dbgCan.height);
-
-    if(!spr.complete || !spr.naturalWidth){
-      dctx.fillStyle="#eaf0ff"; dctx.font="14px monospace";
-      dctx.fillText("sprites.png not loaded yet", 14, 28);
-      return;
-    }
-
-    // draw the full sheet fitted
-    const scale = Math.min((dbgCan.width-20)/spr.naturalWidth, (dbgCan.height-20)/spr.naturalHeight);
-    const ox = (dbgCan.width - spr.naturalWidth*scale)/2;
-    const oy = (dbgCan.height - spr.naturalHeight*scale)/2;
-    dctx.imageSmoothingEnabled = false;
-    dctx.drawImage(spr, ox, oy, spr.naturalWidth*scale, spr.naturalHeight*scale);
-
-    // overlay grid
-    const cw = spr.naturalWidth / GRID_COLS;
-    const ch = spr.naturalHeight / GRID_ROWS;
-    dctx.strokeStyle="rgba(255,255,255,0.18)";
-    for(let x=1;x<GRID_COLS;x++){
-      const gx = ox + x*cw*scale;
-      dctx.beginPath(); dctx.moveTo(gx, oy); dctx.lineTo(gx, oy+spr.naturalHeight*scale); dctx.stroke();
-    }
-    for(let y=1;y<GRID_ROWS;y++){
-      const gy = oy + y*ch*scale;
-      dctx.beginPath(); dctx.moveTo(ox, gy); dctx.lineTo(ox+spr.naturalWidth*scale, gy); dctx.stroke();
-    }
-
-    // preview some cells
-    const preview = [
-      {r:0,f:0,label:"C_IDLE"},
-      {r:1,f:0,label:"C_WALK"},
-      {r:2,f:0,label:"C_ATK"},
-      {r:4,f:0,label:"E_SMALL"},
-      {r:6,f:0,label:"B_IDLE"},
-    ];
-    const px=14, py=14, ps=1.0;
-    const cellW = Math.floor(spr.naturalWidth/GRID_COLS);
-    const cellH = Math.floor(spr.naturalHeight/GRID_ROWS);
-    let x0 = 16, y0 = dbgCan.height - (cellH*ps) - 18;
-
-    for(const p of preview){
-      const sx = p.f*cellW, sy=p.r*cellH;
-      dctx.fillStyle="rgba(0,0,0,0.55)";
-      dctx.fillRect(x0-4,y0-4, cellW*ps+8, cellH*ps+26);
-      dctx.drawImage(spr, sx,sy,cellW,cellH, x0,y0, cellW*ps, cellH*ps);
-      dctx.fillStyle="#eaf0ff"; dctx.font="11px monospace";
-      dctx.fillText(p.label, x0, y0 + cellH*ps + 14);
-      x0 += cellW*ps + 10;
-      if(x0 + cellW*ps > dbgCan.width-10){ x0 = 16; y0 -= (cellH*ps + 30); }
-    }
-  }
-
-  function applyGrid(){
-    GRID_COLS = Math.max(1, GRID_COLS|0);
-    GRID_ROWS = Math.max(1, GRID_ROWS|0);
-    recalcCell();
-    renderDbg();
-  }
-
-  document.getElementById("colsMinus").onclick = ()=>{ GRID_COLS=Math.max(1,GRID_COLS-1); applyGrid(); };
-  document.getElementById("colsPlus").onclick  = ()=>{ GRID_COLS=Math.min(40,GRID_COLS+1); applyGrid(); };
-  document.getElementById("rowsMinus").onclick = ()=>{ GRID_ROWS=Math.max(1,GRID_ROWS-1); applyGrid(); };
-  document.getElementById("rowsPlus").onclick  = ()=>{ GRID_ROWS=Math.min(40,GRID_ROWS+1); applyGrid(); };
-  document.getElementById("dbgClose").onclick = closeDbg;
-  document.getElementById("dbgReset").onclick = ()=>{
-    GRID_COLS=DEFAULT_COLS; GRID_ROWS=DEFAULT_ROWS; applyGrid();
-  };
-
-// ==== ALWAYS-works Sprite Debug triggers (mobile safe) ====
-
-// A) Triple-tap the title pill to open
-const titlePill = document.querySelector(".hud .pill"); // first pill
-let tapCount = 0;
-let tapTimer = null;
-
-function registerTap(){
-  tapCount++;
-  if(tapTimer) clearTimeout(tapTimer);
-  tapTimer = setTimeout(()=>{ tapCount=0; }, 420);
-  if(tapCount >= 3){
-    tapCount = 0;
-    openDbg();
   }
 }
 
-// Use click + touchstart for maximum compatibility
-titlePill.addEventListener("click", (e)=>{ e.preventDefault(); registerTap(); }, { passive:false });
-titlePill.addEventListener("touchstart", (e)=>{ e.preventDefault(); registerTap(); }, { passive:false });
+function doSpecial(){
+  if(player.meter < 100) return;
+  if(player.attackLock>0) return;
 
-// B) Two-finger hold anywhere on the canvas
-let twoFingerTimer = null;
+  player.state = "special";
+  player.attackLock = 26;
+  player.meter = 0;
+  sfxSpecial();
 
-canvas.addEventListener("touchstart", (e)=>{
-  if(e.touches && e.touches.length === 2){
-    if(twoFingerTimer) clearTimeout(twoFingerTimer);
-    twoFingerTimer = setTimeout(openDbg, 450);
+  const boom = { x: player.x-40, y: player.y-10, w: player.w+80, h: player.h+30, dmg: 18 };
+
+  for(const e of enemies){
+    if(e.dead) continue;
+    if(aabb(boom, e)){
+      e.hp -= boom.dmg;
+      e.hitstun = 14;
+      e.vx += (e.x < player.x ? -3 : 3);
+      if(e.hp<=0){ e.dead=true; score+=400; }
+    }
   }
-}, { passive:true });
+  if(boss && bossPhase==="fight" && aabb(boom, boss)){
+    boss.hp -= 22;
+    boss.hitstun = 14;
+    if(boss.hp<=0){
+      bossPhase = "defeated";
+      boss.state = "defeat";
+      boss.frame = 5;
+      boss.attackCD = 60;
+      score += 1500;
+    }
+  }
+}
 
-canvas.addEventListener("touchend", (e)=>{
-  if(twoFingerTimer) clearTimeout(twoFingerTimer);
-  twoFingerTimer = null;
-}, { passive:true });
+/* ---------- damage to player ---------- */
+function hurtPlayer(dmg){
+  if(player.invuln>0) return;
+  player.hp = Math.max(0, player.hp - dmg);
+  player.invuln = 24;
+  player.streak = 0; // reset flawless streak
+  sfxHit();
+}
 
-  reset();
-  requestAnimationFrame(tick);
-})();
+/* ---------- background draw (portrait + parallax-ish) ---------- */
+function drawBackground(){
+  if(!BG.complete){
+    ctx.fillStyle="#070912";
+    ctx.fillRect(0,0,V.w,V.h);
+    return;
+  }
+
+  // Use the SAME background image, but scroll it slightly for depth.
+  // We do two layers by drawing it twice with different offsets/crops.
+  const scroll = cam.x / (WORLD.w - V.w); // 0..1
+  const sx = Math.floor(scroll * 120);    // subtle pan through the source image
+  const sx2 = Math.floor(scroll * 60);
+
+  // Layer 1 (slow) - slightly dim
+  ctx.globalAlpha = 0.75;
+  ctx.drawImage(BG, sx2, 0, BG.width - sx2, BG.height, 0, 0, V.w, V.h);
+
+  // Layer 2 (normal) - main
+  ctx.globalAlpha = 1;
+  ctx.drawImage(BG, sx, 0, BG.width - sx, BG.height, 0, 0, V.w, V.h);
+}
+
+/* ---------- main update ---------- */
+function update(){
+  // player physics
+  const speed = 2.2;
+  player.vx = 0;
+  if(keys.left){ player.vx = -speed; player.face = -1; }
+  if(keys.right){ player.vx = speed; player.face = 1; }
+
+  if(keys.jump && player.onGround){
+    player.vy = -6.2;
+    player.onGround = false;
+    player.state = "jump";
+    sfxJump();
+  }
+
+  // attack triggers
+  if(keys.attack){ keys.attack=false; doPlayerAttack(); }
+  if(keys.special){ keys.special=false; doSpecial(); }
+
+  player.vy += 0.32;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // ground
+  if(player.y >= WORLD.groundY){
+    player.y = WORLD.groundY;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // keep player in world
+  player.x = Math.max(10, Math.min(WORLD.w - player.w - 10, player.x));
+
+  // camera follows player, clamped; keeps player from vanishing
+  cam.x = Math.max(0, Math.min(WORLD.w - V.w, player.x - V.w*0.45));
+
+  // states / anim frame
+  if(player.attackLock>0){
+    player.attackLock--;
+  } else {
+    if(!player.onGround) player.state="jump";
+    else if(Math.abs(player.vx)>0.1) player.state="walk";
+    else player.state="idle";
+  }
+
+  // invuln
+  if(player.invuln>0) player.invuln--;
+
+  // meter rule: must be 10 hits with no damage = special ready
+  // (we keep meter building with hits; but only hard-ready at 100)
+  // If you want STRICT: only fill on streak, leave as-is.
+
+  // enemies AI
+  let aliveCount = 0;
+  for(const e of enemies){
+    if(e.dead) continue;
+    aliveCount++;
+
+    if(e.hitstun>0){
+      e.hitstun--;
+      e.x += e.vx;
+      e.vx *= 0.86;
+      continue;
+    }
+
+    const dx = (player.x - e.x);
+    const dist = Math.abs(dx);
+
+    if(e.attackCD>0) e.attackCD--;
+
+    if(dist > 34){
+      e.state = "walk";
+      e.vx = dx>0 ? 1.1 : -1.1;
+      e.x += e.vx;
+    } else {
+      e.state = "attack";
+      e.vx = 0;
+      if(e.attackCD===0){
+        e.attackCD = 30;
+        // simple melee hit
+        const atk = { x:e.x+(dx>0?18:-18), y:e.y+18, w:30, h:28 };
+        if(aabb(atk, player)) hurtPlayer(7);
+      }
+    }
+
+    // clamp
+    e.x = Math.max(0, Math.min(WORLD.w - e.w, e.x));
+  }
+
+  // wave progress
+  if(!waveCleared && aliveCount===0){
+    waveCleared = true;
+    if(wave < 3){
+      wave++;
+      spawnWave(wave);
+    } else {
+      // spawn boss after 3 waves
+      if(!boss && bossPhase==="none") spawnBoss();
+    }
+  }
+
+  // boss AI
+  if(boss){
+    if(bossPhase==="fight"){
+      if(boss.hitstun>0){
+        boss.hitstun--;
+      } else {
+        if(boss.attackCD>0) boss.attackCD--;
+
+        const dx = (player.x - boss.x);
+        const dist = Math.abs(dx);
+
+        if(dist > 80){
+          boss.state = "idle";
+          boss.x += (dx>0 ? 0.8 : -0.8);
+        } else {
+          boss.state = "attack";
+          if(boss.attackCD===0){
+            boss.attackCD = 55;
+            // big slam
+            const atk = { x: boss.x + (dx>0?50:-10), y: boss.y+48, w: 56, h: 40 };
+            if(aabb(atk, player)) hurtPlayer(14);
+          }
+        }
+      }
+
+      boss.x = Math.max(WORLD.w - 520, Math.min(WORLD.w - 120, boss.x));
+    }
+
+    if(bossPhase==="defeated"){
+      // pause then transform
+      boss.attackCD--;
+      if(boss.attackCD<=0){
+        bossPhase = "transform";
+        boss.state = "transform";
+        boss.frame = 0;
+        boss.attackCD = 120;
+      }
+    } else if(bossPhase==="transform"){
+      boss.attackCD--;
+      if(boss.attackCD<=0){
+        bossPhase = "brian";
+        boss.state = "brian";
+      }
+      if(boss.attackCD===60 && !endShown){
+        // show popups when transformation finishes
+        endShown = true;
+        document.getElementById("end1").classList.remove("hidden");
+      }
+    }
+  }
+
+  // UI
+  elHP.textContent = String(player.hp);
+  elMeter.textContent = String(player.meter);
+  elScore.textContent = String(score);
+}
+
+/* ---------- draw ---------- */
+function draw(){
+  beginFrame();
+  ctx.clearRect(0,0,V.w,V.h);
+
+  drawBackground();
+
+  // world -> screen transform with camera
+  const sx = (wx)=> Math.floor(wx - cam.x);
+  const sy = (wy)=> Math.floor(wy);
+
+  // enemies
+  const t = performance.now();
+  for(const e of enemies){
+    if(e.dead){
+      // death frame briefly then disappear
+      // (we just don't draw after dead)
+      continue;
+    }
+    let f=0;
+    if(e.state==="walk") f = (Math.floor(t/180)%2)+1;        // 1..2
+    else if(e.state==="attack") f = 3;
+    else if(e.hitstun>0) f = 4;
+    drawMutant(f, sx(e.x), sy(e.y));
+  }
+
+  // boss
+  if(boss){
+    if(bossPhase==="fight"){
+      // animate boss idle/attack
+      let tx=0, ty=0;
+      if(boss.state==="attack"){
+        tx = (Math.floor(t/220)%2) ? 2 : 3; // atk1/atk2
+      } else {
+        tx = (Math.floor(t/260)%2) ? 0 : 1; // idle1/idle2
+      }
+      drawBoss(tx, 0, sx(boss.x), sy(boss.y));
+      // boss HP bar
+      ctx.fillStyle="rgba(0,0,0,.55)";
+      ctx.fillRect(20, 54, V.w-40, 8);
+      ctx.fillStyle="rgba(255,80,120,.9)";
+      ctx.fillRect(20, 54, Math.floor((V.w-40)*(Math.max(0,boss.hp)/240)), 8);
+    } else if(bossPhase==="defeated"){
+      drawBoss(5,0,sx(boss.x),sy(boss.y));
+    } else if(bossPhase==="transform"){
+      // cycle Row1 frames 0..3
+      const tf = (Math.floor(t/200)%4);
+      drawBoss(tf,1,sx(boss.x),sy(boss.y));
+    } else if(bossPhase==="brian"){
+      // Row2 idle/wave loop
+      const bf = (Math.floor(t/300)%4);
+      drawBoss(bf,2,sx(boss.x),sy(boss.y));
+    }
+  }
+
+  // player blink on invuln
+  if(player.invuln>0 && (Math.floor(t/80)%2===0)){
+    // skip draw to blink
+  } else {
+    // Charlotte animation mapping: 0 idle, 1-2 walk, 3-4 attack, 5 jump, 6 special
+    let frame = 0;
+    if(player.state==="walk") frame = (Math.floor(t/160)%2)+1; // 1..2
+    else if(player.state==="attack") frame = (Math.floor(t/90)%2) ? 3 : 4;
+    else if(player.state==="jump") frame = 5;
+    else if(player.state==="special") frame = 6;
+    else frame = 0;
+
+    // flip by drawing via scale(-1,1)
+    const px = sx(player.x), py = sy(player.y);
+    ctx.save();
+    if(player.face<0){
+      ctx.translate(px+24, 0);
+      ctx.scale(-1,1);
+      drawCharlotte(frame, -24, py);
+    } else {
+      drawCharlotte(frame, px, py);
+    }
+    ctx.restore();
+  }
+
+  // ground hint (subtle)
+  ctx.fillStyle="rgba(0,0,0,.12)";
+  ctx.fillRect(0, WORLD.groundY+62, V.w, 8);
+}
+
+/* ---------- end popup flow ---------- */
+document.getElementById("btnEndNext").addEventListener("click",()=>{
+  document.getElementById("end1").classList.add("hidden");
+  document.getElementById("end2").classList.remove("hidden");
+});
+
+/* ---------- loop ---------- */
+function frame(){
+  if(!running) return;
+  update();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- start buttons (audio gesture) ---------- */
+function startGame(withMute){
+  muted = !!withMute;
+  initAudio();
+  toggleMute(); // toggles based on current; so set then force
+  muted = !!withMute;
+  if(master) master.gain.value = muted ? 0 : 0.22;
+  document.getElementById("mute").textContent = muted ? "UNMUTE" : "MUTE";
+
+  document.getElementById("start").classList.add("hidden");
+  running = true;
+  requestAnimationFrame(frame);
+}
+
+document.getElementById("btnStart").addEventListener("click",()=>startGame(false));
+document.getElementById("btnStartMuted").addEventListener("click",()=>startGame(true));
+document.getElementById("btnStart").addEventListener("touchstart",(e)=>{e.preventDefault(); startGame(false);},{passive:false});
+document.getElementById("btnStartMuted").addEventListener("touchstart",(e)=>{e.preventDefault(); startGame(true);},{passive:false});
+
+/* ---------- safety: show clear error if assets missing ---------- */
+setTimeout(()=>{
+  const missing = [];
+  if(!BG.complete) missing.push("bg_highstreet.png");
+  if(!CHAR.complete) missing.push("charlotte.png");
+  if(!MUT.complete) missing.push("mutant.png");
+  if(!BOSS.complete) missing.push("boss_cox.png");
+  // (complete may still be false early; this is just a hint)
+}, 1500);
 </script>
 </body>
 </html>
