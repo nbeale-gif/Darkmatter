@@ -2,274 +2,175 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Dark Matter Rampage: Haywards Heath</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Charlotte vs The Dark Matter Crisis</title>
 <style>
-  html,body{
-    margin:0; padding:0; background:#05060b; color:#fff;
-    font-family:ui-monospace, monospace;
-    overscroll-behavior:none;
-  }
-  canvas{
-    display:block;
-    margin:0 auto;
-    background:#0a0d1a;
-    image-rendering:pixelated;
-    touch-action:none;
-  }
-  .controls{
-    position:fixed; left:0; right:0; bottom:0;
-    display:flex; justify-content:space-between;
-    padding:10px;
-    background:linear-gradient(to top,rgba(0,0,0,.8),transparent);
-    pointer-events:none;
-  }
-  .btn{
-    pointer-events:auto;
-    width:68px; height:68px;
-    border-radius:12px;
-    background:rgba(255,255,255,.08);
-    display:flex; align-items:center; justify-content:center;
-    font-size:12px;
-    user-select:none;
-  }
+html,body{margin:0;background:#05060b;color:#fff;font-family:ui-monospace,monospace}
+canvas{display:block;margin:0 auto;image-rendering:pixelated}
+#ui{position:fixed;bottom:10px;left:0;right:0;display:flex;justify-content:space-between;padding:10px}
+.btn{width:64px;height:64px;background:rgba(255,255,255,.1);border-radius:12px;
+display:flex;align-items:center;justify-content:center;font-size:12px;user-select:none}
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<div class="controls">
+<div id="ui">
   <div style="display:flex;gap:8px">
-    <div class="btn" id="left">◀</div>
-    <div class="btn" id="right">▶</div>
+    <div class="btn" id="l">◀</div>
+    <div class="btn" id="r">▶</div>
   </div>
   <div style="display:flex;gap:8px">
-    <div class="btn" id="jump">JUMP</div>
-    <div class="btn" id="atk">ATK</div>
+    <div class="btn" id="j">JUMP</div>
+    <div class="btn" id="a">ATK</div>
   </div>
 </div>
 
 <script>
-/* ====== CANVAS SETUP ====== */
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const c=document.getElementById("c"),ctx=c.getContext("2d");
+const W=360,H=640; c.width=W;c.height=H;
+function scale(){const s=Math.min(innerWidth/W,innerHeight/H);
+c.style.width=W*s+"px";c.style.height=H*s+"px"} scale();addEventListener("resize",scale);
 
-const BASE_W = 360;
-const BASE_H = 640;
-
-function resize(){
-  const scale = Math.min(
-    window.innerWidth / BASE_W,
-    window.innerHeight / BASE_H
-  );
-  canvas.width  = BASE_W;
-  canvas.height = BASE_H;
-  canvas.style.width  = BASE_W * scale + "px";
-  canvas.style.height = BASE_H * scale + "px";
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* ====== INPUT ====== */
 const input={l:0,r:0,j:0,a:0};
-["left","right","jump","atk"].forEach(id=>{
-  const key = id==="left"?"l":id==="right"?"r":id==="jump"?"j":"a";
-  const el=document.getElementById(id);
-  el.addEventListener("pointerdown",()=>input[key]=1);
-  el.addEventListener("pointerup",()=>input[key]=0);
-  el.addEventListener("pointerleave",()=>input[key]=0);
+["l","r","j","a"].forEach(k=>{
+document.getElementById(k).onpointerdown=_=>input[k]=1;
+document.getElementById(k).onpointerup=_=>input[k]=0;
 });
 
-/* ====== GAME STATE ====== */
-const game={
-  state:"play",
-  endT:0,
-  score:0
-};
+let state="title",wave=0,timer=0;
 
-/* ====== HERO ====== */
-const hero={
-  x:80,y:520,
-  vx:0,vy:0,
-  onGround:true,
-  dir:1,
-  anim:0,
-  frame:0,
-  hp:100
-};
+const hero={x:40,y:520,vx:0,vy:0,on:true,dir:1,anim:0};
+let enemies=[],boss=null;
 
-/* ====== ENEMIES ====== */
-const enemies=[
-  {x:260,y:520,hp:30,hit:0},
-  {x:320,y:520,hp:30,hit:0}
-];
-
-/* ====== HELPERS ====== */
-function wrapLines(ctx,text,maxW){
-  const words=text.split(" ");
-  let line="",out=[];
-  for(const w of words){
-    const t=line?line+" "+w:w;
-    if(ctx.measureText(t).width<=maxW) line=t;
-    else{ out.push(line); line=w; }
-  }
-  if(line) out.push(line);
-  return out;
+function spawnWave(n){
+  enemies=[];
+  for(let i=0;i<n;i++) enemies.push({x:220+i*40,y:520,hp:10+wave*5});
 }
 
-/* ====== DRAW HERO ====== */
 function drawHero(){
-  ctx.save();
-  ctx.translate(hero.x,hero.y);
-  ctx.scale(hero.dir,1);
-
-  // animation timing
-  hero.anim+=0.15;
-  hero.frame=Math.floor(hero.anim)%3;
-
-  // legs
-  ctx.fillStyle="#2ecc71";
-  const legOffset = hero.frame===1?3:0;
-  ctx.fillRect(-6,0,4,16);
-  ctx.fillRect(2,legOffset,4,16-legOffset);
-
-  // body
-  ctx.fillStyle="#27ae60";
-  ctx.fillRect(-8,-20,16,20);
-
-  // head
-  ctx.fillStyle="#f1c27d";
-  ctx.fillRect(-6,-32,12,12);
-
-  // hair
-  ctx.fillStyle="#1b1b1b";
-  ctx.fillRect(-7,-36,14,10);
-
-  ctx.restore();
+ ctx.save();ctx.translate(hero.x,hero.y);ctx.scale(hero.dir,1);
+ const f=Math.floor(hero.anim)%2;
+ ctx.fillStyle="#1b1b1b"; ctx.fillRect(-8,-36,16,12); // hair
+ ctx.fillStyle="#f2c7a7"; ctx.fillRect(-6,-26,12,12); // face
+ ctx.fillStyle="#2ecc71"; ctx.fillRect(-8,-14,16,22); // green outfit
+ ctx.fillRect(-6,8,4,12); ctx.fillRect(2,f?12:8,4,12); // legs
+ ctx.restore();
 }
 
-/* ====== DRAW ENEMIES ====== */
 function drawEnemy(e){
-  ctx.save();
-  ctx.translate(e.x,e.y);
-  if(e.hit>0){ ctx.globalAlpha=.6; e.hit--; }
-
-  ctx.fillStyle="#b71c1c";
-  ctx.fillRect(-8,-20,16,20);
-  ctx.fillStyle="#e57373";
-  ctx.fillRect(-6,-32,12,12);
-
-  ctx.restore();
+ ctx.save();ctx.translate(e.x,e.y);
+ ctx.fillStyle="rgba(150,0,80,.9)";
+ ctx.fillRect(-8,-20,16,20);
+ ctx.fillStyle="rgba(255,80,200,.9)";
+ ctx.fillRect(-6,-32,12,12);
+ ctx.restore();
 }
 
-/* ====== UPDATE ====== */
+function drawBoss(){
+ ctx.save();ctx.translate(boss.x,boss.y);
+ ctx.fillStyle="rgba(80,0,120,.9)";
+ ctx.fillRect(-60,-120,120,120);
+ ctx.fillStyle="rgba(255,80,255,.9)";
+ ctx.fillRect(-30,-150,60,30);
+ ctx.restore();
+ ctx.fillStyle="#fff";
+ ctx.fillRect(80,20,200*(boss.hp/100),6);
+}
+
+function bg(){
+ ctx.fillStyle="#0a0d1a"; ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="rgba(255,255,255,.05)";
+ for(let i=0;i<60;i++) ctx.fillRect((i*37)%W,(i*83)%H,2,2);
+ ctx.fillStyle="#111"; ctx.fillRect(0,560,W,80);
+ ctx.fillStyle="rgba(120,200,255,.15)";
+ for(let i=0;i<4;i++) ctx.fillRect(i*90+20,420,60,120);
+}
+
+function titleScreen(){
+ ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#fff";ctx.font="20px ui-monospace";
+ ctx.fillText("CHARLOTTE",80,220);
+ ctx.fillText("vs",160,250);
+ ctx.fillText("THE DARK MATTER CRISIS",20,280);
+ ctx.font="12px ui-monospace";
+ ctx.fillText("Haywards Heath High Street",60,320);
+ ctx.fillText("Tap to start",120,380);
+}
+
+c.onpointerdown=()=>{
+ if(state==="title"){state="play";wave=1;spawnWave(3);}
+ if(state==="end") timer+=2;
+};
+
 function update(){
-  if(game.state==="end"){
-    game.endT+=0.02;
-    return;
-  }
+ if(state!=="play") return;
+ hero.vx=(input.r-input.l)*2;
+ hero.x+=hero.vx;
+ if(hero.vx) hero.dir=Math.sign(hero.vx);
+ if(input.j&&hero.on){hero.vy=-6;hero.on=false}
+ hero.vy+=.3; hero.y+=hero.vy;
+ if(hero.y>=520){hero.y=520;hero.vy=0;hero.on=true}
+ hero.anim+=.2;
 
-  hero.vx = (input.r-input.l)*2;
-  hero.x += hero.vx;
-  hero.dir = hero.vx!==0?Math.sign(hero.vx):hero.dir;
+ if(input.a){
+  enemies.forEach(e=>{
+   if(Math.abs(e.x-hero.x)<30) e.hp--;
+  });
+ }
 
-  if(input.j && hero.onGround){
-    hero.vy=-5;
-    hero.onGround=false;
-  }
-
-  hero.vy+=0.25;
-  hero.y+=hero.vy;
-  if(hero.y>=520){
-    hero.y=520;
-    hero.vy=0;
-    hero.onGround=true;
-  }
-
-  if(input.a){
-    enemies.forEach(e=>{
-      if(Math.abs(e.x-hero.x)<30){
-        e.hp-=1;
-        e.hit=5;
-        game.score+=50;
-      }
-    });
-  }
-
-  // remove defeated
-  for(let i=enemies.length-1;i>=0;i--){
-    if(enemies[i].hp<=0) enemies.splice(i,1);
-  }
-
-  if(enemies.length===0){
-    game.state="end";
-  }
+ enemies=enemies.filter(e=>e.hp>0);
+ if(!enemies.length){
+  wave++;
+  if(wave<=3) spawnWave(3+wave);
+  else{ boss={x:260,y:520,hp:100}; state="boss"; }
+ }
 }
 
-/* ====== END CARD ====== */
-function drawEnd(){
-  const pad=24;
-  ctx.fillStyle="rgba(0,0,0,.85)";
-  ctx.fillRect(pad,80,BASE_W-pad*2,BASE_H-160);
-
-  ctx.fillStyle="#fff";
-  ctx.font="18px ui-monospace";
-  let y=120;
-  const lines=[
-    "The rift collapses.",
-    "The mutants dissolve into stardust.",
-    "",
-    "A bewildered figure steps out:",
-    "Professor Brian Cox.",
-    "",
-    "“Thanks. That was genuinely",
-    "quite intense.”",
-    "",
-    "★ TWO TICKETS ★",
-    "Brian Cox Live — Brighton",
-    "(next year)",
-    "",
-    "Merry Christmas, Charlotte ✌",
-    "— Love, Nick"
-  ];
-
-  const max= Math.floor(game.endT*6);
-  let c=0;
-  for(const l of lines){
-    if(c++>max) break;
-    ctx.fillText(l, pad+18, y);
-    y+=24;
-  }
-
-  ctx.font="14px ui-monospace";
-  ctx.fillText("Tap to reveal faster", pad+18, BASE_H-110);
+function updateBoss(){
+ hero.vx=(input.r-input.l)*2;
+ hero.x+=hero.vx;
+ if(input.a && Math.abs(hero.x-boss.x)<80) boss.hp--;
+ if(boss.hp<=0){state="end";timer=0;}
 }
 
-canvas.addEventListener("pointerdown",()=>{
-  if(game.state==="end") game.endT+=2;
-});
+function endScreen(){
+ ctx.fillStyle="rgba(0,0,0,.85)";
+ ctx.fillRect(20,120,320,360);
+ ctx.fillStyle="#fff"; ctx.font="14px ui-monospace";
+ const lines=[
+  "The dark matter collapses…",
+  "",
+  "Ah — thank you.",
+  "I’m Professor Brian Cox.",
+  "",
+  "Your prize:",
+  "★ TWO TICKETS ★",
+  "Brian Cox Live",
+  "Brighton (next year)",
+  "",
+  "Merry Christmas, Charlotte ✌",
+  "— Love, Nick"
+ ];
+ let y=160;
+ const n=Math.floor(timer*3);
+ for(let i=0;i<n && i<lines.length;i++){
+  ctx.fillText(lines[i],40,y); y+=26;
+ }
+}
 
-/* ====== LOOP ====== */
 function loop(){
-  ctx.clearRect(0,0,BASE_W,BASE_H);
-
-  // background
-  ctx.fillStyle="#0a0d1a";
-  ctx.fillRect(0,0,BASE_W,BASE_H);
-  ctx.fillStyle="rgba(255,255,255,.05)";
-  for(let i=0;i<80;i++){
-    ctx.fillRect(Math.random()*BASE_W,Math.random()*BASE_H,1,1);
-  }
-
-  drawHero();
+ ctx.clearRect(0,0,W,H);
+ if(state==="title"){titleScreen();}
+ else{
+  bg(); drawHero();
   enemies.forEach(drawEnemy);
-
-  if(game.state==="end") drawEnd();
-
-  update();
-  requestAnimationFrame(loop);
+  if(state==="boss"){drawBoss(); updateBoss();}
+  else update();
+ }
+ if(state==="end"){timer+=.02; endScreen();}
+ requestAnimationFrame(loop);
 }
 loop();
 </script>
