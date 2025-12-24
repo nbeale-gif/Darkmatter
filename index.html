@@ -746,4 +746,44 @@
       let yy = by+14;
       for (const ln of drawLines){
         ctx.fillText(ln, bx+14, yy);
-        yy += 16
+        yy += 16;
+      }
+
+      // After a bit, stop the game loop (but keep drawing)
+      if (cut.t > 12){
+        mode = "END";
+        $stage.textContent = "HIGH STREET";
+      }
+    }
+
+    if (player.hp <= 0 && mode==="PLAY"){
+      // quick restart to keep it gift-friendly
+      resetGame();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // Start buttons
+  const overlay = document.getElementById('overlay');
+  function begin(muted){
+    overlay.style.display="none";
+    try {
+      audio = AudioBus(muted);
+      // iOS needs resume on gesture
+      if (audio.ac.state !== "running") audio.ac.resume();
+    } catch {}
+    startPlay();
+  }
+  document.getElementById('start').addEventListener('click', ()=>begin(false));
+  document.getElementById('startMuted').addEventListener('click', ()=>begin(true));
+
+  // When pack isn't found, show a clear error in console
+  pack.onerror = () => console.warn("Could not load assets/pack.png. Make sure it exists and is named exactly pack.png");
+
+  resetGame();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
