@@ -872,22 +872,38 @@
     // Row 2: launcher / air
     // Row 3: grab/throw
     let fx = 0, fy = 0;
+const moving = Math.abs(player.vx) > 20 && player.onGround;
 
-    const moving = Math.abs(player.vx) > 20 && player.onGround;
+// Pick frames that are stable + readable (tweakable)
+const IDLE = { fx:0, fy:0 };
+const WALK = [
+  {fx:1, fy:0},
+  {fx:2, fy:0},
+  {fx:3, fy:0},
+  {fx:2, fy:0},
+];
+const JAB = { fx:0, fy:1 };
+const LAUNCHER = { fx:1, fy:1 };
+const AIR = { fx:2, fy:1 };
+const GRAB = { fx:3, fy:1 };
 
-    if (player.hitbox && player.actionT > 0){
-      if (player.hitbox.kind === "launcher"){ fy = 2; fx = 3; }
-      else if (player.hitbox.kind === "jab"){ fy = 1; fx = 6; }
-      else if (player.hitbox.kind === "air"){ fy = 2; fx = 6; }
-      else { fy = 1; fx = 6; }
-    } else if (player.grabbing){
-      fy = 3; fx = 2;
-    } else if (moving){
-      fy = 0;
-      fx = 1 + (Math.floor(player.animT * 10) % 5); // 1..5
-    } else {
-      fy = 0; fx = 0;
-    }
+if (player.hitbox && player.actionT > 0){
+  if (player.hitbox.kind === "launcher"){ fx = LAUNCHER.fx; fy = LAUNCHER.fy; }
+  else if (player.hitbox.kind === "jab"){ fx = JAB.fx; fy = JAB.fy; }
+  else if (player.hitbox.kind === "air"){ fx = AIR.fx; fy = AIR.fy; }
+  else { fx = JAB.fx; fy = JAB.fy; }
+}
+else if (player.grabbing){
+  fx = GRAB.fx; fy = GRAB.fy;
+}
+else if (moving){
+  const idx = Math.floor(player.animT * 8) % WALK.length; // slower walk cycle
+  fx = WALK[idx].fx;
+  fy = WALK[idx].fy;
+}
+else {
+  fx = IDLE.fx; fy = IDLE.fy;
+}
 
     // Scale + anchor
     const scale = 0.9; // bump to 1.75 if you want bigger
