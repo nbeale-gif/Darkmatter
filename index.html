@@ -1,524 +1,72 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <title>DARK MATTER RAMPAGE: HAYWARDS HEATH</title>
-  <style>
-    html, body { height: 100%; margin: 0; background:#05060a; color:#d7d7ff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; overflow:hidden; }
-    #wrap { position:relative; height:100%; }
-    #topbar { position:absolute; left:0; right:0; top:0; z-index:5;
-      padding:10px 12px; display:flex; gap:12px; align-items:center;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(180deg, rgba(30,30,60,.35), rgba(10,10,18,.2)); }
-    #topbar b { letter-spacing:.5px; font-size:12px; }
-    #hud { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:11px; opacity:.95;}
-    .pill { padding:4px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; background:rgba(255,255,255,.04); }
-
-    canvas { position:absolute; left:0; right:0; top:52px; bottom:0; width:100%; height:calc(100% - 52px);
-      display:block; image-rendering: pixelated; touch-action:none; }
-
-    /* Touch controls */
-    #controls { position:absolute; left:0; right:0; bottom:0; height:42%;
-      pointer-events:none; z-index:10; }
-    .pad, .btns { position:absolute; bottom:10px; pointer-events:auto; }
-    .pad { left:10px; width:45%; max-width:340px; height:180px; }
-    .btns { right:10px; width:45%; max-width:420px; height:180px; display:flex; gap:10px; justify-content:flex-end; align-items:flex-end; flex-wrap:wrap; }
-
-    .tbtn {
-      user-select:none; -webkit-user-select:none;
-      width:76px; height:76px; border-radius:18px;
-      display:flex; align-items:center; justify-content:center;
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.06);
-      color:rgba(255,255,255,.9);
-      font-weight:700; font-size:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.35);
-      touch-action:none;
-    }
-    .tbtn:active { transform: translateY(1px); background:rgba(255,255,255,.10); }
-
-    .drow { display:flex; gap:10px; justify-content:flex-start; align-items:flex-end; }
-    .small { width:62px; height:62px; border-radius:16px; font-size:11px; opacity:.95; }
-    .wide  { width:130px; height:62px; border-radius:16px; font-size:11px; }
-
-    /* Start overlay */
-    #startOverlay {
-      position:absolute; inset:52px 0 0 0; z-index:20;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.55);
-    }
-    #startCard{
-      width:min(520px, 92vw);
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(10,10,18,.75);
-      border-radius:18px;
-      padding:18px;
-      box-shadow:0 20px 60px rgba(0,0,0,.5);
-    }
-    #startCard h1{ margin:0 0 8px 0; font-size:18px; letter-spacing:.5px; }
-    #startCard p{ margin:8px 0; font-size:12px; opacity:.9; line-height:1.35; }
-    #startRow{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
-    .startBtn{
-      padding:10px 12px; border-radius:12px;
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(255,255,255,.08);
-      color:rgba(255,255,255,.92);
-      font-weight:700; font-size:12px;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Dark Matter Rampage</title>
+<style>
+html,body{margin:0;height:100%;background:#05060a;color:#fff;font-family:system-ui;overflow:hidden}
+canvas{width:100%;height:100%;touch-action:none}
+#overlay{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);
+  z-index:9999;
+}
+#card{
+  padding:20px;
+  background:#111;
+  border-radius:16px;
+  text-align:center;
+}
+button{
+  margin:10px;
+  padding:14px 18px;
+  font-size:16px;
+  border-radius:12px;
+}
+</style>
 </head>
 <body>
-<div id="wrap">
-  <div id="topbar">
-    <b>DARK MATTER RAMPAGE: HAYWARDS HEATH</b>
-    <div id="hud">
-      <span class="pill" id="hp">HP: 100</span>
-      <span class="pill" id="meter">METER: 0</span>
-      <span class="pill" id="weapon">WEAPON: NONE</span>
-      <span class="pill" id="stage">STAGE: 1</span>
-      <span class="pill" id="score">SCORE: 0</span>
-    </div>
-  </div>
 
-  <canvas id="c" width="960" height="540"></canvas>
-
-  <!-- Touch Controls -->
-  <div id="controls">
-    <div class="pad">
-      <div class="drow">
-        <div class="tbtn" data-btn="left">◀</div>
-        <div class="tbtn" data-btn="right">▶</div>
-        <div class="tbtn small" data-btn="jump">JUMP</div>
-      </div>
-      <div style="margin-top:10px; display:flex; gap:10px;">
-        <div class="tbtn wide" data-btn="mute">MUTE</div>
-      </div>
-    </div>
-    <div class="btns">
-      <div class="tbtn" data-btn="attack">ATTACK</div>
-      <div class="tbtn" data-btn="special">SPECIAL</div>
-      <div class="tbtn small" data-btn="grab">GRAB<br/>THROW</div>
-      <div class="tbtn small" data-btn="pickup">PICKUP</div>
-    </div>
-  </div>
-
-  <!-- Start overlay to unlock audio + start -->
-  <div id="startOverlay">
-    <div id="startCard">
-      <h1>DARK MATTER RAMPAGE</h1>
-      <p>Tap <b>START</b> to begin (this also enables sound on mobile).</p>
-      <p><b>Controls:</b> ◀ ▶ move • JUMP • ATTACK (jab-jab-launcher) • SPECIAL • GRAB/THROW • PICKUP</p>
-      <div id="startRow">
-        <button class="startBtn" id="startBtn">START</button>
-        <button class="startBtn" id="startMuteBtn">START (MUTED)</button>
-      </div>
-    </div>
+<div id="overlay">
+  <div id="card">
+    <h2>Dark Matter Rampage</h2>
+    <p>Tap START to begin (enables sound)</p>
+    <button id="start">START</button>
   </div>
 </div>
 
+<canvas id="c"></canvas>
+
 <script>
-(() => {
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
 
-  const UI = {
-    hp: document.getElementById("hp"),
-    meter: document.getElementById("meter"),
-    weapon: document.getElementById("weapon"),
-    stage: document.getElementById("stage"),
-    score: document.getElementById("score"),
-  };
+let started = false;
+document.getElementById("start").onclick = () => {
+  document.getElementById("overlay").style.display = "none";
+  started = true;
+};
 
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const lerp  = (a, b, t) => a + (b - a) * t;
-  const rnd   = (a, b) => a + Math.random() * (b - a);
-
-  // Fixed-step
-  let last = performance.now(), acc = 0;
-  const DT = 1/60;
-
-  // ---- Virtual touch input ----
-  const v = {
-    left:false, right:false, jump:false,
-    attack:false, special:false, grab:false, pickup:false,
-    mute:false,
-    // edge triggers
-    attackHit:false, specialHit:false, grabHit:false, pickupHit:false, muteHit:false,
-    startHit:false
-  };
-  function clearEdge() {
-    v.attackHit = v.specialHit = v.grabHit = v.pickupHit = v.muteHit = false;
+function loop(){
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(started){
+    ctx.fillStyle="#7cf";
+    ctx.fillRect(canvas.width/2-25, canvas.height/2-25, 50, 50);
+    ctx.fillText("GAME RUNNING", 20, 40);
   }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
 
-  // Touch button wiring (pointer events)
-  const btnEls = [...document.querySelectorAll("[data-btn]")];
-  const activePointers = new Map(); // pointerId -> btnName
-
-  function setBtn(name, isDown, edge=false) {
-    if (name === "left") v.left = isDown;
-    else if (name === "right") v.right = isDown;
-    else if (name === "jump") v.jump = isDown;
-    else if (name === "attack") { if (isDown && !v.attack) v.attackHit = true; v.attack = isDown; }
-    else if (name === "special") { if (isDown && !v.special) v.specialHit = true; v.special = isDown; }
-    else if (name === "grab") { if (isDown && !v.grab) v.grabHit = true; v.grab = isDown; }
-    else if (name === "pickup") { if (isDown && !v.pickup) v.pickupHit = true; v.pickup = isDown; }
-    else if (name === "mute") { if (isDown) v.muteHit = true; }
-  }
-
-  for (const el of btnEls) {
-    el.addEventListener("pointerdown", (e) => {
-      el.setPointerCapture(e.pointerId);
-      const name = el.getAttribute("data-btn");
-      activePointers.set(e.pointerId, name);
-      setBtn(name, true);
-      e.preventDefault();
-    }, {passive:false});
-
-    el.addEventListener("pointerup", (e) => {
-      const name = activePointers.get(e.pointerId);
-      if (name) setBtn(name, false);
-      activePointers.delete(e.pointerId);
-      e.preventDefault();
-    }, {passive:false});
-
-    el.addEventListener("pointercancel", (e) => {
-      const name = activePointers.get(e.pointerId);
-      if (name) setBtn(name, false);
-      activePointers.delete(e.pointerId);
-    });
-  }
-
-  // ------------------- SOUND (WebAudio, no files) -------------------
-  const SND = (() => {
-    let ctxA = null, master = null;
-    let muted = false;
-    let musicTimer = null;
-    const seq = [262,330,392,330,294,330,392,494,392,330,294,330,262,330,392,330];
-    let si = 0;
-
-    function ensure() {
-      if (ctxA) return;
-      ctxA = new (window.AudioContext || window.webkitAudioContext)();
-      master = ctxA.createGain();
-      master.gain.value = 0.22;
-      master.connect(ctxA.destination);
-    }
-    function setMuted(v) {
-      muted = v;
-      if (master) master.gain.value = muted ? 0 : 0.22;
-    }
-    function toggleMute() { setMuted(!muted); }
-
-    function beep({type="square", freq=440, dur=0.08, vol=0.3, slide=0, noise=false} = {}) {
-      ensure();
-      if (ctxA.state === "suspended") ctxA.resume();
-
-      const t0 = ctxA.currentTime;
-      const t1 = t0 + dur;
-
-      const g = ctxA.createGain();
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(vol, t0 + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, t1);
-      g.connect(master);
-
-      if (noise) {
-        const bufferSize = Math.floor(ctxA.sampleRate * dur);
-        const buffer = ctxA.createBuffer(1, bufferSize, ctxA.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * 0.7;
-        const src = ctxA.createBufferSource();
-        src.buffer = buffer;
-
-        const filter = ctxA.createBiquadFilter();
-        filter.type = "highpass";
-        filter.frequency.setValueAtTime(freq, t0);
-
-        src.connect(filter);
-        filter.connect(g);
-        src.start(t0);
-        src.stop(t1);
-        return;
-      }
-
-      const o = ctxA.createOscillator();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, t0);
-      if (slide !== 0) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t1);
-      o.connect(g);
-      o.start(t0);
-      o.stop(t1);
-    }
-
-    function chord() {
-      beep({type:"square", freq:440, dur:0.07, vol:0.22});
-      beep({type:"square", freq:554, dur:0.07, vol:0.20});
-      beep({type:"square", freq:659, dur:0.09, vol:0.18});
-    }
-
-    function musicStart() {
-      ensure();
-      if (musicTimer) return;
-      si = 0;
-      musicTimer = setInterval(() => {
-        if (muted) return;
-        const f = seq[si++ % seq.length];
-        beep({type:"square", freq:f, dur:0.08, vol:0.07});
-        if (si % 4 === 0) beep({type:"triangle", freq:f/2, dur:0.09, vol:0.05});
-      }, 120);
-    }
-    function musicStop() { if (musicTimer) clearInterval(musicTimer); musicTimer = null; }
-
-    const fx = {
-      start: () => chord(),
-      punch1: () => beep({type:"square", freq:310, dur:0.045, vol:0.18, slide:-60}),
-      punch2: () => beep({type:"square", freq:280, dur:0.05, vol:0.18, slide:-70}),
-      launcher: () => { beep({type:"sawtooth", freq:220, dur:0.09, vol:0.16, slide:260}); beep({noise:true, freq:900, dur:0.06, vol:0.07}); },
-      air: () => beep({type:"triangle", freq:540, dur:0.06, vol:0.12, slide:-120}),
-      hit: () => beep({type:"square", freq:180, dur:0.06, vol:0.20, noise:true}),
-      hurt: () => beep({type:"sawtooth", freq:160, dur:0.12, vol:0.18, slide:-80}),
-      special: () => { beep({type:"sawtooth", freq:200, dur:0.18, vol:0.18, slide:320}); beep({noise:true, freq:1000, dur:0.12, vol:0.08}); },
-      pickup: () => beep({type:"square", freq:740, dur:0.06, vol:0.12, slide:80}),
-      throw: () => beep({type:"square", freq:220, dur:0.08, vol:0.16, slide:-30}),
-      glass: () => { beep({noise:true, freq:1400, dur:0.10, vol:0.12}); beep({type:"square", freq:520, dur:0.05, vol:0.08, slide:-200}); },
-      enemyPop: () => beep({type:"square", freq:110, dur:0.10, vol:0.16, slide:-30}),
-      bossRoar: () => beep({type:"sawtooth", freq:90, dur:0.25, vol:0.20, slide:40}),
-      zone: () => beep({type:"triangle", freq:420, dur:0.10, vol:0.10, slide:60}),
-      win: () => { beep({type:"square", freq:523, dur:0.08, vol:0.14}); beep({type:"square", freq:659, dur:0.10, vol:0.14}); beep({type:"square", freq:784, dur:0.12, vol:0.14}); }
-    };
-
-    return { ensure, setMuted, toggleMute, musicStart, musicStop, fx };
-  })();
-
-  // ------------------- Game -------------------
-  const GROUND_Y = 410;
-  const WORLD_W = 9000;
-  const particles = [];
-
-  function spawnParticles(x, y, n, kind="hit") {
-    for (let i=0;i<n;i++) particles.push({ x,y, vx:rnd(-220,220), vy:rnd(-260,-40), life:rnd(0.25,0.75), t:0, kind });
-  }
-
-  const player = {
-    x:140,y:GROUND_Y-64,w:34,h:64,vx:0,vy:0,facing:1,onGround:false,
-    hp:100,invuln:0,flash:0,meter:0,score:0,
-    comboStep:0,comboWindow:0,actionT:0,hitbox:null,
-    grabbing:null,grabT:0, weapon:null
-  };
-
-  function makeEnemy(type, x) {
-    const isBrute = type==="brute";
-    return { x, y:GROUND_Y-(isBrute?70:58), w:isBrute?42:34, h:isBrute?70:58,
-      vx:0,vy:0,hp:isBrute?80:40,type,facing:-1,stun:0,atkT:0,juggleT:0,dead:false,carried:false };
-  }
-
-  const enemies = [];
-  const items = [];
-  const windows = [
-    {x:1150,y:240,w:120,h:90,broken:false},{x:2380,y:240,w:120,h:90,broken:false},
-    {x:3640,y:240,w:120,h:90,broken:false},{x:4860,y:240,w:120,h:90,broken:false},
-    {x:6120,y:240,w:120,h:90,broken:false},
-  ];
-
-  let boss = null;
-  const zones = { gravityFlip:null, timeSlow:null, globalSlow:1.0, gravityDir:1 };
-  const stage = { n:1, wave:0, nextSpawnX:600, bossSpawned:false };
-  const cam = { x:0 };
-
-  const game = {
-    state:"title", message:"", messageT:0, titleBlink:0, shakeT:0, shakeMag:0,
-    cutsceneT:0, cutsceneLines:[],
-    reset() {
-      player.x=140; player.y=GROUND_Y-player.h; player.vx=player.vy=0;
-      player.hp=100; player.meter=0; player.score=0; player.invuln=0; player.flash=0;
-      player.comboStep=0; player.comboWindow=0; player.actionT=0; player.hitbox=null;
-      player.grabbing=null; player.grabT=0; player.weapon=null;
-
-      stage.n=1; stage.wave=0; stage.nextSpawnX=600; stage.bossSpawned=false;
-      enemies.length=0; items.length=0; particles.length=0;
-      for (const w of windows) w.broken=false;
-      boss=null;
-      zones.gravityFlip=null; zones.timeSlow=null; zones.globalSlow=1.0; zones.gravityDir=1;
-      cam.x=0;
-      this.state="title"; this.message=""; this.messageT=0; this.cutsceneT=0; this.cutsceneLines=[];
-      SND.musicStop();
-    },
-    start() {
-      this.state="playing";
-      this.message="STAGE 1: STATION APPROACH";
-      this.messageT=2.0;
-      SND.fx.start();
-      SND.musicStart();
-    }
-  };
-
-  function setMessage(t, s=1.5){ game.message=t; game.messageT=s; }
-  function aabb(ax,ay,aw,ah,bx,by,bw,bh){ return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by; }
-  function addMeter(vv){ player.meter = clamp(player.meter+vv,0,100); }
-
-  function damagePlayer(amount, knockX=160, knockY=220){
-    if (player.invuln>0) return;
-    player.hp = clamp(player.hp-amount,0,100);
-    player.invuln=0.6; player.flash=0.12;
-    player.vx = -player.facing*knockX;
-    player.vy = -knockY*zones.gravityDir;
-    spawnParticles(player.x+player.w/2, player.y+player.h/2, 10, "hurt");
-    game.shakeT=0.18; game.shakeMag=6;
-    SND.fx.hurt();
-    if (player.hp<=0){ game.state="gameover"; setMessage("GAME OVER — Refresh page to retry", 999); SND.musicStop(); }
-  }
-
-  function spawnItem(x, type){
-    items.push({ x, y:GROUND_Y-18, w:18, h:18, type, uses:type==="chair"?8:5, dmg:type==="chair"?18:14 });
-  }
-
-  function killEnemy(e){
-    e.dead=true;
-    spawnParticles(e.x+e.w/2, e.y+e.h/2, 18, "boom");
-    SND.fx.enemyPop();
-    player.score += 150;
-    addMeter(15);
-    if (Math.random()<0.35) spawnItem(e.x, "chair");
-    else if (Math.random()<0.15) spawnItem(e.x, "cone");
-  }
-
-  function tryBreakWindow(e){
-    for (const w of windows){
-      if (w.broken) continue;
-      const wx=w.x, ww=w.w, wy=w.y, wh=w.h;
-      if (Math.abs((e.x+e.w/2)-(wx+ww/2))<35 && Math.abs(e.vx)>160 && e.y<GROUND_Y-30){
-        w.broken=true;
-        spawnParticles(wx+ww/2, wy+wh/2, 35, "glass");
-        SND.fx.glass();
-        player.score += 400; addMeter(20);
-        setMessage("SMASH! Window bonus +400", 1.0);
-        e.vx = -Math.sign(e.vx)*220;
-      }
-    }
-  }
-
-  function damageEnemy(e, amount, dir=1, launch=false){
-    if (e.dead) return;
-    e.hp -= amount;
-    e.stun = 0.18;
-    e.vx += dir*(launch?140:220);
-    if (launch){ e.juggleT=0.6; e.vy = -520*zones.gravityDir; }
-    spawnParticles(e.x+e.w/2, e.y+e.h/2, 10, "hit");
-    game.shakeT=0.10; game.shakeMag=3;
-    player.score += 50; addMeter(10);
-    SND.fx.hit();
-    if (e.hp<=0) killEnemy(e);
-  }
-
-  function stageName(n){ return ["STATION APPROACH","THE SHOPS","THE PUB DISTRICT","THE COSMIC RIFT","EVENT HORIZON"][n-1]||"UNKNOWN"; }
-
-  function spawnWave(){
-    stage.wave++;
-    const count = clamp(2 + stage.n + (stage.wave%2), 3, 8);
-    const hasBrute = (stage.n>=3 && stage.wave%2===0);
-    for (let i=0;i<count;i++){
-      const type = (hasBrute && i>=count-2) ? "brute" : "grunt";
-      enemies.push(makeEnemy(type, player.x + 520 + i*64));
-    }
-    stage.nextSpawnX = player.x + 760 + stage.n*70;
-    setMessage(`WAVE ${stage.wave}!`, 1.0);
-  }
-
-  function spawnBoss(){
-    boss = { x:7900, y:GROUND_Y-140, w:98, h:140, vx:0, vy:0, hp:520, stun:0, atkT:0, phase:1, dead:false, zoneT:1.8 };
-    setMessage("FINAL BOSS: THE EVENT HORIZON WARDEN", 2.0);
-    SND.fx.bossRoar();
-  }
-
-  function spawnGravityFlipZone(){
-    const x = clamp(player.x + rnd(140,360), 7400, 8600);
-    zones.gravityFlip = { x, w:380, t:5.0 };
-    SND.fx.zone(); setMessage("WARNING: GRAVITY FLIP ZONE!", 1.1);
-  }
-  function spawnTimeSlowZone(){
-    const x = clamp(player.x + rnd(120,380), 7400, 8600);
-    zones.timeSlow = { x, w:420, t:5.0 };
-    SND.fx.zone(); setMessage("WARNING: TIME-SLOW BUBBLE!", 1.1);
-  }
-  function updateZones(dt){
-    zones.globalSlow = 1.0;
-    if (zones.gravityFlip){
-      zones.gravityFlip.t -= dt;
-      const mid = player.x+player.w/2;
-      const inside = mid>zones.gravityFlip.x && mid<zones.gravityFlip.x+zones.gravityFlip.w;
-      zones.gravityDir = inside ? -1 : 1;
-      if (zones.gravityFlip.t<=0) zones.gravityFlip=null;
-    } else zones.gravityDir = 1;
-
-    if (zones.timeSlow){
-      zones.timeSlow.t -= dt;
-      const mid = player.x+player.w/2;
-      const inside = mid>zones.timeSlow.x && mid<zones.timeSlow.x+zones.timeSlow.w;
-      zones.globalSlow = inside ? 0.55 : 1.0;
-      if (zones.timeSlow.t<=0) zones.timeSlow=null;
-    }
-  }
-
-  function startEndingCutscene(){
-    game.state="cutscene"; game.cutsceneT=0;
-    game.cutsceneLines=[
-      "The dark matter clears…",
-      "A confused figure emerges from the debris.",
-      "Professor Brian Cox: “Ah. Right. Yes. That was a bit of a misunderstanding.”",
-      "“They abducted me to stabilise the rift.”",
-      "“You’ve quite literally saved the universe.”",
-      "He hands you two tickets.",
-      "REWARD: 2x Tickets — ‘Brian Cox Live — Brighton (Next Year)’",
-      "Charlotte flashes a peace sign ✌",
-      "THE UNIVERSE IS SAFE.",
-      "THANK YOU FOR PLAYING."
-    ];
-    SND.fx.win(); SND.musicStop();
-  }
-
-  // ---- Combo system ----
-  function resetCombo(){ player.comboStep=0; player.comboWindow=0; }
-
-  function doAttack(){
-    if (player.actionT>0 || player.grabbing) return;
-
-    // air attack
-    if (!player.onGround){
-      player.actionT=0.18;
-      player.hitbox={ kind:"air", x:0,y:0,w:30,h:28,dmg:(player.weapon?player.weapon.dmg:12), launch:false };
-      SND.fx.air();
-      return;
-    }
-
-    // ground chain
-    if (player.comboWindow<=0) player.comboStep=0;
-    player.comboStep = clamp(player.comboStep+1, 1, 3);
-    player.comboWindow = 0.35;
-
-    const dmgBase = player.weapon ? player.weapon.dmg : 10;
-    const isLauncher = player.comboStep===3;
-
-    if (player.comboStep===1) SND.fx.punch1();
-    if (player.comboStep===2) SND.fx.punch2();
-    if (isLauncher) SND.fx.launcher();
-
-    player.actionT = isLauncher ? 0.28 : 0.18;
-    player.hitbox = { kind:isLauncher?"launcher":"jab", x:0,y:0, w:isLauncher?36:30, h:34,
-      dmg:isLauncher?dmgBase+10:dmgBase, launch:isLauncher };
-
-    if (player.weapon){
-      player.weapon.uses--;
-      if (player.weapon.uses<=0){ setMessage("WEAPON BROKE!", 1.0); player.weapon=null; }
-    }
-  }
-
-  // ---- Grab / Throw ----
-  function tryGrab(){
-    if (player.actionT>0 || player.grabbing) return;
-    const px = player.x+player.w/2;
-    let best=null, bestD=999;
-    for (const e of enemies){
-      if (e.dead || e.juggleT>0) continue;
-      const ex=e.x+
+</body>
+</html>
