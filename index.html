@@ -827,18 +827,41 @@
     GRID_COLS=DEFAULT_COLS; GRID_ROWS=DEFAULT_ROWS; applyGrid();
   };
 
-  // Hold the title pill area to open tuner (mobile-friendly)
-  const hud = document.getElementById("hudBar");
-  let holdTimer=null;
-  hud.addEventListener("pointerdown", (e)=>{
-    if(holdTimer) clearTimeout(holdTimer);
-    holdTimer = setTimeout(openDbg, 550);
-  });
-  hud.addEventListener("pointerup", ()=>{ if(holdTimer) clearTimeout(holdTimer); });
-  hud.addEventListener("pointercancel", ()=>{ if(holdTimer) clearTimeout(holdTimer); });
+// ==== ALWAYS-works Sprite Debug triggers (mobile safe) ====
 
-  // Re-render preview when image finishes loading
-  spr.addEventListener("load", ()=>{ renderDbg(); });
+// A) Triple-tap the title pill to open
+const titlePill = document.querySelector(".hud .pill"); // first pill
+let tapCount = 0;
+let tapTimer = null;
+
+function registerTap(){
+  tapCount++;
+  if(tapTimer) clearTimeout(tapTimer);
+  tapTimer = setTimeout(()=>{ tapCount=0; }, 420);
+  if(tapCount >= 3){
+    tapCount = 0;
+    openDbg();
+  }
+}
+
+// Use click + touchstart for maximum compatibility
+titlePill.addEventListener("click", (e)=>{ e.preventDefault(); registerTap(); }, { passive:false });
+titlePill.addEventListener("touchstart", (e)=>{ e.preventDefault(); registerTap(); }, { passive:false });
+
+// B) Two-finger hold anywhere on the canvas
+let twoFingerTimer = null;
+
+canvas.addEventListener("touchstart", (e)=>{
+  if(e.touches && e.touches.length === 2){
+    if(twoFingerTimer) clearTimeout(twoFingerTimer);
+    twoFingerTimer = setTimeout(openDbg, 450);
+  }
+}, { passive:true });
+
+canvas.addEventListener("touchend", (e)=>{
+  if(twoFingerTimer) clearTimeout(twoFingerTimer);
+  twoFingerTimer = null;
+}, { passive:true });
 
   reset();
   requestAnimationFrame(tick);
