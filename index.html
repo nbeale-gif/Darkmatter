@@ -9,7 +9,7 @@
   #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
   canvas{
     width:100vw;
-    height:100dvh;              /* fixes mobile address-bar squish */
+    height:100dvh;               /* critical for mobile URL bar */
     touch-action:none;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -17,44 +17,48 @@
   }
 
   .ui { position:fixed; inset:0; pointer-events:none; }
-  .hud { position:absolute; top:10px; left:10px; right:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .hud { position:absolute; top:6px; left:8px; right:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
   .pill{
     background:rgba(10,14,30,.55);
     border:1px solid rgba(180,200,255,.18);
     color:#dfe7ff;
-    padding:6px 10px;
+    padding:5px 8px;
     border-radius:999px;
-    font-size:12px;
+    font-size:11px;
     letter-spacing:.06em;
     text-transform:uppercase;
     backdrop-filter: blur(8px);
     white-space:nowrap;
   }
 
-  .controls { position:absolute; left:0; right:0; bottom:0; height:40vh; padding-bottom: env(safe-area-inset-bottom); }
+  .controls {
+    position:absolute; left:0; right:0; bottom:0;
+    height:32vh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .btn{
     pointer-events:auto;
     position:absolute;
-    width:72px; height:72px;
+    width:74px; height:74px;
     border-radius:18px;
     border:1px solid rgba(180,200,255,.18);
     background:rgba(10,14,30,.34);
     backdrop-filter: blur(10px);
     color:#dfe7ff;
     display:flex; align-items:center; justify-content:center;
-    font-weight:800; letter-spacing:.08em;
+    font-weight:900; letter-spacing:.08em;
     user-select:none; -webkit-user-select:none;
   }
   .btn:active{ transform:scale(.97); }
 
-  #left { left:14px; bottom:18px; width:132px; height:72px; }
-  #left .l, #left .r { position:absolute; top:0; width:62px; height:72px; display:flex; align-items:center; justify-content:center; }
+  #left { left:12px; bottom:16px; width:140px; height:74px; }
+  #left .l, #left .r { position:absolute; top:0; width:68px; height:74px; display:flex; align-items:center; justify-content:center; }
   #left .l { left:0; } #left .r { right:0; }
 
-  #jump { left:160px; bottom:18px; }
-  #attack { right:160px; bottom:18px; width:92px; }
-  #special { right:56px; bottom:18px; width:92px; }
-  #mute { left:14px; bottom:98px; width:132px; height:60px; font-size:12px; }
+  #jump { left:164px; bottom:16px; }
+  #attack { right:160px; bottom:16px; width:96px; }
+  #special { right:54px; bottom:16px; width:96px; }
+  #mute { left:12px; bottom:96px; width:140px; height:58px; font-size:12px; }
 
   #overlay{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
@@ -80,7 +84,7 @@
 
 <div class="ui">
   <div class="hud">
-    <div class="pill">DARK MATTER RAMPAGE: HAYWARDS HEATH</div>
+    <div class="pill">CHARLOTTE vs THE DARK MATTER CRISIS</div>
     <div class="pill">HP: <span id="hp">100</span></div>
     <div class="pill">METER: <span id="meter">0</span></div>
     <div class="pill">STAGE: <span id="stage">TITLE</span></div>
@@ -114,40 +118,20 @@
 
 <script>
 (() => {
-  // ========= ASSETS (ONLY TWO) =========
+  // ================== ASSETS (ONLY TWO) ==================
   const BG_URL  = "assets/bg.png";
   const SPR_URL = "assets/sprites.png";
 
-  // ========= RENDER SETTINGS =========
-  const V_W = 480, V_H = 270;      // virtual resolution (stable pixels)
-  const CELL = 64;                // sprite cell size
-  const COLS = 6;                 // spritesheet columns (6x9 grid)
-  // rows 0..8 (9 rows)
-  const ROW = {
-    C_IDLE: 0,
-    C_WALK: 1,
-    C_ATK:  2,
-    C_SP:   3,
-    E_SMALL:4,
-    E_BIG:  5,
-    B_IDLE: 6,
-    B_ATK:  7,
-    FX:     8
-  };
+  // ================== PORTRAIT VIRTUAL SCREEN ==================
+  // Big enough to look good on phones, stable for UI
+  const V_W = 360, V_H = 640;
 
-  // how many frames per row (use first N cells in that row)
-  const FC = {
-    C_IDLE: 4,
-    C_WALK: 6,
-    C_ATK:  6,
-    C_SP:   6,
-    E_SMALL:6,
-    E_BIG:  6,
-    B_IDLE: 6,
-    B_ATK:  6
-  };
+  // Spritesheet is a grid: 6 columns × 9 rows (we auto-calc cell size from image dimensions)
+  const GRID_COLS = 6;
+  const GRID_ROWS = 9;
+  let CELL_W = 64, CELL_H = 64; // will be overwritten after sprites load
 
-  // ========= CANVAS =========
+  // ================== CANVAS ==================
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
   ctx.imageSmoothingEnabled = false;
@@ -161,10 +145,10 @@
   addEventListener('resize', resize, { passive:true });
   resize();
 
+  // Fill screen (no giant black bars). Still pixelated.
   function beginFrame(){
     const cw = canvas.width, ch = canvas.height;
-    // integer scale to keep crisp pixels
-    const scale = Math.max(1, Math.floor(Math.min(cw / V_W, ch / V_H)));
+    const scale = Math.min(cw / V_W, ch / V_H);
     const vw = V_W * scale, vh = V_H * scale;
     const ox = ((cw - vw) / 2) | 0;
     const oy = ((ch - vh) / 2) | 0;
@@ -173,42 +157,41 @@
     return { scale, ox, oy };
   }
 
-  // ========= HUD =========
+  // ================== HUD ==================
   const $hp = document.getElementById('hp');
   const $meter = document.getElementById('meter');
   const $stage = document.getElementById('stage');
   const $score = document.getElementById('score');
 
-  // ========= INPUT =========
+  // ================== INPUT ==================
   const input = { left:false, right:false, jump:false, attack:false, special:false };
   const leftPad = document.getElementById('left');
-  leftPad.querySelector('.l').addEventListener('pointerdown', e=>{e.preventDefault(); input.left=true;});
-  leftPad.querySelector('.l').addEventListener('pointerup',   e=>{e.preventDefault(); input.left=false;});
-  leftPad.querySelector('.l').addEventListener('pointercancel', e=>{e.preventDefault(); input.left=false;});
-  leftPad.querySelector('.r').addEventListener('pointerdown', e=>{e.preventDefault(); input.right=true;});
-  leftPad.querySelector('.r').addEventListener('pointerup',   e=>{e.preventDefault(); input.right=false;});
-  leftPad.querySelector('.r').addEventListener('pointercancel', e=>{e.preventDefault(); input.right=false;});
+
+  const bindPress = (el, downFn, upFn) => {
+    el.addEventListener('pointerdown', e=>{ e.preventDefault(); downFn(); });
+    el.addEventListener('pointerup',   e=>{ e.preventDefault(); upFn(); });
+    el.addEventListener('pointercancel', e=>{ e.preventDefault(); upFn(); });
+    el.addEventListener('pointerleave', e=>{ e.preventDefault(); upFn(); });
+  };
+
+  bindPress(leftPad.querySelector('.l'), ()=>input.left=true, ()=>input.left=false);
+  bindPress(leftPad.querySelector('.r'), ()=>input.right=true, ()=>input.right=false);
 
   function bindHold(id,key){
     const el=document.getElementById(id);
-    const d=e=>{e.preventDefault(); input[key]=true;};
-    const u=e=>{e.preventDefault(); input[key]=false;};
-    el.addEventListener('pointerdown', d);
-    el.addEventListener('pointerup', u);
-    el.addEventListener('pointercancel', u);
-    el.addEventListener('pointerleave', u);
+    bindPress(el, ()=>input[key]=true, ()=>input[key]=false);
   }
   bindHold('jump','jump');
   bindHold('attack','attack');
   bindHold('special','special');
 
-  // ========= AUDIO (NO FILES) =========
+  // ================== AUDIO (NO FILES) ==================
   let audio=null;
   function AudioBus(muted){
     const ac = new (window.AudioContext||window.webkitAudioContext)();
     const master = ac.createGain(); master.gain.value = muted?0:0.9; master.connect(ac.destination);
-    const musicG = ac.createGain(); musicG.gain.value = 0.30; musicG.connect(master);
-    const sfxG = ac.createGain(); sfxG.gain.value = 0.70; sfxG.connect(master);
+    const musicG = ac.createGain(); musicG.gain.value = 0.28; musicG.connect(master);
+    const sfxG = ac.createGain(); sfxG.gain.value = 0.72; sfxG.connect(master);
 
     function tone(freq=440,dur=0.06,type='square',gain=0.12){
       const o=ac.createOscillator(), g=ac.createGain();
@@ -225,7 +208,7 @@
     const charge=()=>{ tone(330,0.10,'sine',0.12); tone(660,0.14,'sine',0.10); };
     const roar=()=>{ tone(70,0.20,'sawtooth',0.14); tone(90,0.18,'square',0.10); };
 
-    // chiptune loop
+    // simple chiptune loop
     const seq=[440,660,523,784,392,587,494,740];
     const o=ac.createOscillator(); o.type='square';
     const g=ac.createGain(); g.gain.value=0.0001;
@@ -236,7 +219,7 @@
         const t=base + bar*1.6 + i*0.2;
         o.frequency.setValueAtTime(seq[i], t);
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.11, t+0.01);
+        g.gain.linearRampToValueAtTime(0.10, t+0.01);
         g.gain.exponentialRampToValueAtTime(0.0001, t+0.17);
       }
     }
@@ -246,71 +229,105 @@
   }
   document.getElementById('mute').addEventListener('pointerdown', e=>{e.preventDefault(); if(audio) audio.toggleMute();});
 
-  // ========= LOAD IMAGES =========
+  // ================== LOAD IMAGES ==================
   const bg = new Image(); bg.src = BG_URL;
   const spr = new Image(); spr.src = SPR_URL;
 
-  // ========= HELPERS =========
+  spr.addEventListener('load', () => {
+    // Auto-calc cell size so sprites NEVER crop wrong even if your file got resized
+    CELL_W = Math.floor(spr.naturalWidth / GRID_COLS);
+    CELL_H = Math.floor(spr.naturalHeight / GRID_ROWS);
+  });
+
+  // ================== HELPERS ==================
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const aabb=(ax,ay,aw,ah,bx,by,bw,bh)=> ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
 
+  // Row map (0..8)
+  const ROW = {
+    C_IDLE: 0,
+    C_WALK: 1,
+    C_ATK:  2,
+    C_SP:   3,
+    E_SMALL:4,
+    E_BIG:  5,
+    B_IDLE: 6,
+    B_ATK:  7
+  };
+  // Frames per row to animate (use first N columns)
+  const FR = {
+    C_IDLE: 4,
+    C_WALK: 6,
+    C_ATK:  6,
+    C_SP:   6,
+    E_SMALL:6,
+    E_BIG:  6,
+    B_IDLE: 6,
+    B_ATK:  6
+  };
+
   function drawFrame(row, frame, dx, dy, scale, flip){
     if(!spr.complete || !spr.naturalWidth) return;
-    const f = frame % COLS;
-    const sx = f * CELL;
-    const sy = row * CELL;
+    const f = frame % GRID_COLS;
+    const sx = f * CELL_W;
+    const sy = row * CELL_H;
     ctx.save();
     ctx.translate(dx,dy);
     if(flip){
       ctx.scale(-1,1);
-      ctx.translate(-CELL*scale,0);
+      ctx.translate(-CELL_W*scale,0);
     }
-    ctx.drawImage(spr, sx,sy,CELL,CELL, 0,0, CELL*scale, CELL*scale);
+    ctx.drawImage(spr, sx,sy,CELL_W,CELL_H, 0,0, CELL_W*scale, CELL_H*scale);
     ctx.restore();
   }
 
-  // ========= GAME =========
+  // ================== GAME ==================
   let mode="TITLE", t=0, camX=0, score=0, wave=0, dt=0;
-  const world = { w: 2600, floor: 214 };
+
+  // Tall world for portrait. Keep floor lower to show more street.
+  const world = { w: 2800, floor: 520 };
 
   const player = {
-    x:120, y:world.floor, vx:0, vy:0, face:1,
+    x:180, y:world.floor, vx:0, vy:0, face:1,
     hp:100, inv:0,
     onGround:true,
     combo:0, comboTimer:0,
     hitStreakNoDmg:0,
     specialReady:false,
     anim:"idle", frame:0, frameT:0,
-    lockAnim:0 // keeps attack/special from instantly snapping back
+    lockAnim:0
   };
 
   const enemies = [];
-  const boss = { active:false, x:2400, y:world.floor, hp:260, phase:0, gravFlip:0, timeSlow:0, frame:0, frameT:0, atkCD:0 };
-  const cut = { t:0 };
+  const boss = { active:false, x:2550, y:world.floor, hp:260, phase:0, gravFlip:0, timeSlow:0, frame:0, frameT:0, atkCD:0 };
+
+  const cut = { step:0, t:0 }; // step 0 = Brian popup, step 1 = reward popup
+  const sparkles = [];
 
   function reset(){
     mode="TITLE"; t=0; camX=0; score=0; wave=0;
-    player.x=120; player.y=world.floor; player.vx=0; player.vy=0; player.face=1;
+    player.x=180; player.y=world.floor; player.vx=0; player.vy=0; player.face=1;
     player.hp=100; player.inv=0; player.onGround=true;
     player.combo=0; player.comboTimer=0;
     player.hitStreakNoDmg=0; player.specialReady=false;
     player.anim="idle"; player.frame=0; player.frameT=0; player.lockAnim=0;
     enemies.length=0;
-    boss.active=false; boss.x=2400; boss.hp=260; boss.phase=0; boss.gravFlip=0; boss.timeSlow=0; boss.frame=0; boss.frameT=0; boss.atkCD=0;
-    cut.t=0;
+    boss.active=false; boss.x=2550; boss.hp=260; boss.phase=0; boss.timeSlow=0; boss.gravFlip=0; boss.frame=0; boss.frameT=0; boss.atkCD=0;
+    cut.step=0; cut.t=0;
+    sparkles.length=0;
     $stage.textContent="TITLE";
+    $meter.textContent="0";
   }
 
   function spawnWave(n){
     const baseX = 520 + (wave-1)*520;
     for(let i=0;i<n;i++){
       enemies.push({
-        kind: (Math.random()<0.6 ? "small" : "big"),
-        x: baseX + i*120 + (Math.random()*60|0),
+        kind: (Math.random()<0.65 ? "small" : "big"),
+        x: baseX + i*120 + (Math.random()*70|0),
         y: world.floor,
-        hp: (wave===1?46:wave===2?62:78) + (Math.random()*10|0),
-        frame:0, frameT:0,
-        atkCD: 0
+        hp: (wave===1?52:wave===2?68:86) + (Math.random()*10|0),
+        frame:0, frameT:0
       });
     }
   }
@@ -320,7 +337,7 @@
     $stage.textContent="HIGH STREET";
     enemies.length=0;
     boss.active=false;
-    wave=1; spawnWave(5);
+    wave=1; spawnWave(6);
   }
 
   function damagePlayer(d){
@@ -346,7 +363,6 @@
     onHit();
     audio && audio.hit();
   }
-
   function damageBoss(dmg){
     boss.hp -= dmg;
     score += 450;
@@ -354,9 +370,8 @@
     audio && audio.hit();
   }
 
-  // ========= BACKGROUND + PARALLAX =========
+  // ================== BACKGROUND + PARALLAX ==================
   function drawBackground(){
-    // fallback if still loading
     if(!bg.complete || !bg.naturalWidth){
       ctx.fillStyle="#070a18"; ctx.fillRect(0,0,V_W,V_H);
       ctx.fillStyle="#dfe7ff"; ctx.font="12px monospace";
@@ -364,30 +379,34 @@
       return;
     }
 
+    // We draw BG as a tiled strip, parallaxed by camera.
     const scroll = (mode==="PLAY"||mode==="CUTSCENE") ? camX : 0;
     const w = bg.naturalWidth, h = bg.naturalHeight;
 
-    // far pass
-    const p1 = (scroll*0.18 + t*8) % w;
-    ctx.globalAlpha=0.78;
-    for(let x=-w; x<=V_W+w; x+=w){
-      ctx.drawImage(bg, x-p1, 0, w, h);
+    // Fit BG height to our portrait virtual height (so street fills screen)
+    const scaleY = V_H / h;
+    const drawW = w * scaleY;
+    const drawH = V_H;
+
+    const pFar = (scroll*0.18 + t*10) % drawW;
+    ctx.globalAlpha=0.80;
+    for(let x=-drawW; x<=V_W+drawW; x+=drawW){
+      ctx.drawImage(bg, x - pFar, 0, drawW, drawH);
     }
 
-    // near pass
-    const p2 = (scroll*0.42 + t*14) % w;
+    const pNear = (scroll*0.42 + t*18) % drawW;
     ctx.globalAlpha=1.0;
-    for(let x=-w; x<=V_W+w; x+=w){
-      ctx.drawImage(bg, x-p2, 0, w, h);
+    for(let x=-drawW; x<=V_W+drawW; x+=drawW){
+      ctx.drawImage(bg, x - pNear, 0, drawW, drawH);
     }
 
-    // light vignette
+    // mild vignette
     ctx.globalAlpha=1;
-    ctx.fillStyle="rgba(0,0,0,0.15)";
+    ctx.fillStyle="rgba(0,0,0,0.14)";
     ctx.fillRect(0,0,V_W,V_H);
   }
 
-  // ========= PLAYER ANIM LOGIC =========
+  // ================== PLAYER ANIM ==================
   function setAnim(name, lock=0){
     if(player.anim!==name){
       player.anim=name;
@@ -403,7 +422,7 @@
     if(player.lockAnim<=0){
       const speed = Math.abs(player.vx);
       if(!player.onGround){
-        setAnim("walk", 0); // simple airborne pose using walk row
+        setAnim("walk", 0);
       } else if(speed>5){
         setAnim("walk", 0);
       } else {
@@ -417,10 +436,10 @@
       0.08;
 
     const max =
-      (player.anim==="idle") ? FC.C_IDLE :
-      (player.anim==="walk") ? FC.C_WALK :
-      (player.anim==="attack") ? FC.C_ATK :
-      FC.C_SP;
+      (player.anim==="idle") ? FR.C_IDLE :
+      (player.anim==="walk") ? FR.C_WALK :
+      (player.anim==="attack") ? FR.C_ATK :
+      FR.C_SP;
 
     player.frameT += dt;
     if(player.frameT > rate){
@@ -430,10 +449,11 @@
   }
 
   function drawPlayer(){
-    const s = 1.15;
+    // Scale tuned for portrait
+    const s = 1.35;
     const px = player.x - camX;
-    const dx = px - (CELL*s*0.5);
-    const dy = player.y - (CELL*s);
+    const dx = px - (CELL_W*s*0.5);
+    const dy = player.y - (CELL_H*s);
 
     if(player.inv>0 && (Math.floor(t*18)%2===0)) ctx.globalAlpha=0.55;
 
@@ -451,40 +471,34 @@
   }
 
   function drawEnemies(){
-    const s = 1.10;
+    const s = 1.30;
     for(const e of enemies){
       e.frameT += dt;
       if(e.frameT>0.12){ e.frameT=0; e.frame=(e.frame+1)%6; }
-
       const ex = e.x - camX;
-      const dx = ex - (CELL*s*0.5);
-      const dy = e.y - (CELL*s);
+      const dx = ex - (CELL_W*s*0.5);
+      const dy = e.y - (CELL_H*s);
       const flip = (player.x<e.x);
-
-      if(e.kind==="small"){
-        drawFrame(ROW.E_SMALL, e.frame, dx, dy, s, flip);
-      } else {
-        drawFrame(ROW.E_BIG, e.frame, dx, dy, s, flip);
-      }
+      if(e.kind==="small") drawFrame(ROW.E_SMALL, e.frame, dx, dy, s, flip);
+      else drawFrame(ROW.E_BIG, e.frame, dx, dy, s, flip);
     }
   }
 
   function drawBoss(){
     if(!boss.active) return;
-    const s = 2.15;
+    const s = 2.35;
     boss.frameT += dt;
     if(boss.frameT>0.11){ boss.frameT=0; boss.frame=(boss.frame+1)%6; }
 
     const bx = boss.x - camX;
-    const dx = bx - (CELL*s*0.55);
-    const dy = boss.y - (CELL*s);
+    const dx = bx - (CELL_W*s*0.55);
+    const dy = boss.y - (CELL_H*s);
     const flip = (player.x<boss.x);
-
     const row = (boss.phase>=1) ? ROW.B_ATK : ROW.B_IDLE;
     drawFrame(row, boss.frame, dx, dy, s, flip);
   }
 
-  // ========= COMBAT =========
+  // ================== COMBAT ==================
   function doCombat(){
     const didAtk = input.attack;
     const didSp  = input.special && player.specialReady;
@@ -500,41 +514,141 @@
     }
 
     if(didAtk || didSp){
-      const reach = didSp ? 96 : 60;
-      const ax = player.x + player.face*22;
-      const ay = player.y - 52;
-      const hb = { x: ax-reach/2, y: ay-30, w: reach, h: 62 };
+      const reach = didSp ? 110 : 70;
+      const ax = player.x + player.face*26;
+      const ay = player.y - 64;
+      const hb = { x: ax-reach/2, y: ay-34, w: reach, h: 72 };
 
-      // jab-jab-launcher: every 3rd hit pops them slightly
       const launcher = (!didSp && (player.combo % 3)===2);
 
       for(let i=enemies.length-1;i>=0;i--){
         const e=enemies[i];
-        if(aabb(hb.x,hb.y,hb.w,hb.h, e.x-24, e.y-58, 48, 58)){
-          damageEnemy(e, didSp?22:11);
-          if(launcher) e.y -= 10;
-          if(e.hp<=0){ enemies.splice(i,1); score+=200; }
+        if(aabb(hb.x,hb.y,hb.w,hb.h, e.x-26, e.y-64, 52, 64)){
+          damageEnemy(e, didSp?24:12);
+          if(launcher) e.y -= 12;
+          if(e.hp<=0){ enemies.splice(i,1); score+=250; }
         }
       }
 
       if(boss.active){
-        if(aabb(hb.x,hb.y,hb.w,hb.h, boss.x-70, boss.y-150, 140, 150)){
-          damageBoss(didSp?18:9);
+        if(aabb(hb.x,hb.y,hb.w,hb.h, boss.x-82, boss.y-170, 164, 170)){
+          damageBoss(didSp?20:10);
         }
       }
     }
   }
 
-  // ========= UPDATE LOOP =========
+  // ================== ENDING POPUPS + SPARKLES ==================
+  function drawPopupCard(title, lines, hint){
+    const pad = 14;
+    const bw = Math.min(V_W - 34, 330);
+    const bh = Math.min(V_H - 180, 220);
+    const bx = (V_W - bw) / 2;
+    const by = (V_H - bh) / 2 - 20;
+
+    ctx.fillStyle = "rgba(10,14,30,0.86)";
+    ctx.strokeStyle = "rgba(180,200,255,0.22)";
+    ctx.lineWidth = 1;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = "#eaf0ff";
+    ctx.font = "bold 12px monospace";
+    ctx.fillText(title, bx + pad, by + pad + 10);
+
+    ctx.font = "12px monospace";
+    let y = by + pad + 34;
+    const maxW = bw - pad*2;
+
+    function wrapLine(text){
+      const words = text.split(" ");
+      let line = "";
+      const out = [];
+      for(const w of words){
+        const test = line ? (line + " " + w) : w;
+        if(ctx.measureText(test).width > maxW){
+          if(line) out.push(line);
+          line = w;
+        } else line = test;
+      }
+      if(line) out.push(line);
+      return out;
+    }
+
+    for(const ln of lines){
+      const wrapped = wrapLine(ln);
+      for(const w of wrapped){
+        if(y > by + bh - 34) break;
+        ctx.fillText(w, bx + pad, y);
+        y += 16;
+      }
+      y += 6;
+    }
+
+    if(hint){
+      ctx.fillStyle = "rgba(234,240,255,0.78)";
+      ctx.font = "11px monospace";
+      ctx.fillText(hint, bx + pad, by + bh - 14);
+    }
+  }
+
+  function spawnSparkles(){
+    // burst around the popup
+    for(let i=0;i<26;i++){
+      sparkles.push({
+        x: (V_W/2) + (Math.random()*220-110),
+        y: (V_H/2) + (Math.random()*160-80),
+        vx: (Math.random()*2-1)*26,
+        vy: -(18 + Math.random()*38),
+        life: 0.9 + Math.random()*0.6,
+        t: 0,
+        size: 1 + (Math.random()*2|0)
+      });
+    }
+  }
+
+  function updateSparkles(){
+    for(let i=sparkles.length-1;i>=0;i--){
+      const s = sparkles[i];
+      s.t += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vy += 70 * dt;
+      if(s.t > s.life) sparkles.splice(i,1);
+    }
+  }
+
+  function drawSparkles(){
+    // tiny pixel stars (no color hardcoding: use white w/ alpha)
+    for(const s of sparkles){
+      const a = Math.max(0, 1 - (s.t / s.life));
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(s.x|0, s.y|0, s.size, s.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ================== UPDATE LOOP ==================
+  let last=performance.now();
+  function tick(now){
+    dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+    t += dt;
+
+    if(mode!=="TITLE") update();
+    draw();
+
+    requestAnimationFrame(tick);
+  }
+
   function update(){
     $hp.textContent = player.hp|0;
     $score.textContent = score|0;
     $meter.textContent = player.specialReady ? 100 : Math.min(99, player.hitStreakNoDmg*10|0);
 
-    // camera
-    camX = clamp(player.x - V_W*0.45, 0, world.w - V_W);
+    camX = clamp(player.x - V_W*0.40, 0, world.w - V_W);
 
-    // boss effects
     const slow = boss.timeSlow>0 ? 0.45 : 1.0;
     const grav = boss.gravFlip>0 ? -980 : 980;
     const dtS  = dt*slow;
@@ -564,19 +678,18 @@
     if(boss.gravFlip<=0){
       if(player.y>=world.floor){ player.y=world.floor; player.vy=0; player.onGround=true; }
     } else {
-      const ceil=52;
+      const ceil=120;
       if(player.y<=ceil){ player.y=ceil; player.vy=0; player.onGround=true; }
     }
-    player.x = clamp(player.x, 20, world.w-20);
+    player.x = clamp(player.x, 30, world.w-30);
 
     // enemies AI
     for(const e of enemies){
       const dir = Math.sign(player.x - e.x);
-      const sp = (e.kind==="small") ? 75 : 55;
+      const sp = (e.kind==="small") ? 78 : 58;
       e.x += dir * sp * dtS;
 
-      // contact damage
-      if(aabb(player.x-18, player.y-60, 36, 60, e.x-22, e.y-56, 44, 56)){
+      if(aabb(player.x-20, player.y-72, 40, 72, e.x-26, e.y-66, 52, 66)){
         damagePlayer(e.kind==="small" ? 7 : 10);
       }
     }
@@ -586,60 +699,55 @@
       if(enemies.length===0 && !boss.active){
         if(wave<3){
           wave++;
-          spawnWave(4+wave);
+          spawnWave(5+wave);
         } else {
           boss.active=true;
-          boss.x = 2350;
+          boss.x = 2520;
           boss.hp = 260;
-          boss.phase=0;
-          boss.timeSlow=0;
-          boss.gravFlip=0;
+          boss.phase=0; boss.timeSlow=0; boss.gravFlip=0; boss.atkCD=0;
           audio && audio.roar();
         }
       }
     }
 
-    // boss behavior + mechanics
+    // boss behavior
     if(boss.active){
       const dir = Math.sign(player.x - boss.x);
-      boss.x += dir * 38 * dtS;
+      boss.x += dir * 40 * dtS;
 
       boss.atkCD = Math.max(0, boss.atkCD - dtS);
       if(boss.atkCD<=0){
-        // occasional mechanics bursts
         const r = Math.random();
-        if(r<0.33) boss.timeSlow = 1.6;
-        else if(r<0.66) boss.gravFlip = 2.2;
+        if(r<0.34) boss.timeSlow = 1.6;
+        else if(r<0.68) boss.gravFlip = 2.2;
         boss.atkCD = 2.2;
         boss.phase = 1;
-      } else {
-        boss.phase = 0;
-      }
+      } else boss.phase = 0;
 
       boss.timeSlow = Math.max(0, boss.timeSlow - dtS);
       boss.gravFlip = Math.max(0, boss.gravFlip - dtS);
 
-      // boss contact damage
-      if(aabb(player.x-18, player.y-60, 36, 60, boss.x-70, boss.y-150, 140, 150)){
+      if(aabb(player.x-20, player.y-72, 40, 72, boss.x-86, boss.y-178, 172, 178)){
         damagePlayer(14);
       }
 
       if(boss.hp<=0){
         boss.active=false;
         mode="CUTSCENE";
-        cut.t=0;
+        cut.step=0; cut.t=0;
+        sparkles.length=0;
       }
     }
 
-    // combat
     doCombat();
-
-    // animation
     updateAnim();
 
-    // death -> restart
     if(player.hp<=0 && mode==="PLAY"){
       reset();
+    }
+
+    if(mode==="CUTSCENE"){
+      updateSparkles();
     }
   }
 
@@ -649,9 +757,9 @@
 
     drawBackground();
 
-    // subtle ground darkening to make sprites pop
-    ctx.fillStyle="rgba(0,0,0,0.20)";
-    ctx.fillRect(0, world.floor, V_W, 80);
+    // ground shade (helps sprites pop)
+    ctx.fillStyle="rgba(0,0,0,0.18)";
+    ctx.fillRect(0, world.floor, V_W, V_H - world.floor);
 
     if(mode==="PLAY"){
       drawEnemies();
@@ -660,62 +768,47 @@
     }
 
     if(mode==="CUTSCENE"){
-      drawEnemies();
-      drawBoss();
-      drawPlayer();
-
-      cut.t += dt;
-      ctx.fillStyle="rgba(0,0,0,0.60)";
+      // show background behind ending
+      ctx.fillStyle="rgba(0,0,0,0.50)";
       ctx.fillRect(0,0,V_W,V_H);
 
-      ctx.fillStyle="rgba(10,14,30,0.84)";
-      ctx.strokeStyle="rgba(180,200,255,0.18)";
-      const bx=28, by=42, bw=V_W-56, bh=V_H-84;
-      ctx.fillRect(bx,by,bw,bh);
-      ctx.strokeRect(bx,by,bw,bh);
+      // popups
+      cut.t += dt;
 
-      ctx.fillStyle="#eaf0ff";
-      ctx.font="12px monospace";
+      if(cut.step === 0){
+        drawPopupCard(
+          "PROF. BRIAN COX",
+          [
+            "The rift collapses. The mutants dissolve into stardust.",
+            "\"Thanks. That was… genuinely quite intense.\"",
+            "You’ve saved the universe (and Haywards Heath)."
+          ],
+          "Tap to continue…"
+        );
+      }
 
-      const lines=[
-        "The rift collapses. The mutants dissolve into stardust, fresh to retry…",
-        "",
-        "A bewildered figure steps out: Professor Brian Cox.",
-        "",
-        "\"Thanks. That was… genuinely quite intense.\"",
-        "",
-        "",
-        "REWARD UNLOCKED",
-        "🎟️ TWO TICKETS 🎟️",
-        "Brian Cox: Emergence — Live in Brighton",
-        "",
-        "Merry Christmas, Charlotte 🦋",
-        "— Love you always, Nick x"
-      ];
-      const full=lines.join("\n");
-      const reveal=Math.min(full.length, Math.floor(cut.t*52));
-      const text=full.slice(0,reveal).split("\n");
+      if(cut.step === 1){
+        if(sparkles.length===0) spawnSparkles();
+        drawSparkles();
 
-      let yy=by+16;
-      for(const ln of text){ ctx.fillText(ln, bx+14, yy); yy+=16; }
+        drawPopupCard(
+          "REWARD UNLOCKED",
+          [
+            "🎟️ TWO TICKETS 🎟️",
+            "Brian Cox: Emergence — Live in Brighton",
+            "",
+            "Merry Christmas, Charlotte 🦋",
+            "— Love you always, Nick x"
+          ],
+          "Tap to restart"
+        );
+      }
     }
   }
 
-  // ========= MAIN LOOP =========
-  let last=performance.now();
-  function tick(now){
-    dt = Math.min(0.033, (now-last)/1000);
-    last = now;
-    t += dt;
-
-    if(mode!=="TITLE") update();
-    draw();
-
-    requestAnimationFrame(tick);
-  }
-
-  // ========= START OVERLAY =========
+  // ================== START / CUTSCENE TAP ==================
   const overlay = document.getElementById('overlay');
+
   function begin(muted){
     overlay.style.display="none";
     try{
@@ -727,6 +820,13 @@
 
   document.getElementById('start').addEventListener('click', ()=>begin(false));
   document.getElementById('startMuted').addEventListener('click', ()=>begin(true));
+
+  canvas.addEventListener("pointerdown", () => {
+    if(mode === "CUTSCENE"){
+      if(cut.step === 0){ cut.step = 1; return; }
+      if(cut.step === 1){ reset(); return; }
+    }
+  });
 
   reset();
   requestAnimationFrame(tick);
