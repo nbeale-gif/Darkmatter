@@ -1,323 +1,891 @@
-
-
 <!doctype html>
 <html lang="en">
 <head>
-
-
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Charlotte vs The Dark Matter Crisis</title>
   <style>
-    html, body { margin:0; padding:0; height:100%; background:#05060a; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
-    canvas { width:100vw; height:100vh; touch-action:none; }
-    /* soft vignette for “gamey” look */
-    #vignette { pointer-events:none; position:fixed; inset:0;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
-      mix-blend-mode: multiply;
+    :root{
+      --ui-bg: rgba(8,10,16,.72);
+      --ui-stroke: rgba(255,255,255,.10);
+      --ui-text: rgba(255,255,255,.92);
+    }
+    html, body { margin:0; height:100%; background:#05060b; overflow:hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    #wrap{
+      position:fixed; inset:0;
+      display:flex; flex-direction:column;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    #hud{
+      position:relative;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      padding:10px 10px 0;
+      pointer-events:none;
+      z-index:5;
+    }
+    .pill{
+      pointer-events:none;
+      color:var(--ui-text);
+      background:var(--ui-bg);
+      border:1px solid var(--ui-stroke);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      backdrop-filter: blur(10px);
+    }
+    #game{
+      position:relative;
+      flex:1;
+      min-height:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      touch-action:none;
+    }
+    #controls{
+      position:relative;
+      z-index:6;
+      padding:10px;
+      display:grid;
+      grid-template-columns: 1fr 1fr 1.3fr 1.3fr 1.3fr;
+      gap:10px;
+      align-items:end;
+    }
+    .btn{
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action:none;
+      color:rgba(255,255,255,.95);
+      background:rgba(10,12,22,.62);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:18px 10px;
+      font-weight:700;
+      letter-spacing:.9px;
+      text-transform:uppercase;
+      text-align:center;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.small{ padding:18px 0; }
+    #overlay{
+      position:fixed; inset:0;
+      display:none;
+      justify-content:center;
+      align-items:center;
+      padding:24px;
+      z-index:10;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+    }
+    #overlay.show{ display:flex; }
+    .card{
+      width:min(520px, 92vw);
+      color:rgba(255,255,255,.92);
+      background: rgba(8,10,18,.80);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:22px;
+      padding:18px 18px 16px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:16px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .card p{
+      margin:0;
+      font-size:14px;
+      line-height:1.45;
+      white-space:pre-line;
+    }
+    .card .row{
+      display:flex; gap:10px; justify-content:flex-end;
+      margin-top:14px;
+    }
+    .card .cta{
+      pointer-events:auto;
+      cursor:pointer;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:rgba(255,255,255,.92);
+      font-weight:800;
+      letter-spacing:.7px;
+      text-transform:uppercase;
     }
   </style>
 </head>
+
 <body>
-<div id="wrap"><canvas id="c"></canvas></div>
-<div id="vignette"></div>
+<div id="wrap">
+  <div id="hud">
+    <div class="pill" id="titlePill">CHARLOTTE VS THE DARK MATTER CRISIS</div>
+    <div class="pill" id="hpPill">HP: 100</div>
+    <div class="pill" id="meterPill">METER: 0</div>
+    <div class="pill" id="stagePill">STAGE: HIGH STREET</div>
+    <div class="pill" id="wavePill">WAVE: 1/3</div>
+    <div class="pill" id="scorePill">SCORE: 0</div>
+  </div>
+
+  <div id="game">
+    <canvas id="c"></canvas>
+  </div>
+
+  <div id="controls">
+    <div class="btn small" id="leftBtn">◀</div>
+    <div class="btn small" id="rightBtn">▶</div>
+    <div class="btn" id="muteBtn">MUTE</div>
+    <div class="btn" id="jumpBtn">JUMP</div>
+    <div class="btn" id="attackBtn">ATTACK</div>
+    <div class="btn" id="specialBtn" style="grid-column: 4 / span 2;">SPECIAL</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="card">
+    <h2 id="ovTitle">Message</h2>
+    <p id="ovBody">...</p>
+    <div class="row">
+      <button class="cta" id="ovBtn">Continue</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
   // =============================
-  // CONFIG (safe defaults)
+  // ASSET PATHS (edit if needed)
   // =============================
   const ASSETS = {
-    bg:     "assets/bg.png",
-    title:  "assets/title.png",
-    char:   "assets/charlotte.png",
-    mutant: "assets/mutant.png",
-    boss:   "assets/boss.png",
+    title: "assets/title.jpg",          // the poster/title image you posted
+    bg:    "assets/bg_portrait.png",    // portrait background
+    char:  "assets/charlotte.png",
+    mutant:"assets/mutant.png",
+    boss:  "assets/boss.png",
   };
 
-  // Base portrait “design resolution” (renders crisp & scales to device)
-  const BASE_W = 390;   // iPhone-ish
-  const BASE_H = 844;
-
-  // UI layout split
-  const HUD_H = 120;        // top HUD
-  const CONTROLS_H = 210;   // bottom controls
-  const PLAY_TOP = HUD_H;
-  const PLAY_BOT = BASE_H - CONTROLS_H;
-
-  // Movement tuning
-  const GRAVITY = 2400;
-  const FLOOR_Y = PLAY_BOT - 18;
-
-  // Game progression
-  const WAVES_TOTAL = 3;
-
-  // Special move rule: 10 hits + no damage taken during charge window
-  const SPECIAL_HITS_REQUIRED = 10;
+  // ===========================================================
+  // SPRITE SETTINGS (ONLY if your sheets differ, change these)
+  // This assumes each sprite sheet is a horizontal row strip.
+  // ===========================================================
+  const SPR = {
+    // each action is frames in a single row (y=0), evenly spaced
+    char:   { fw: 96, fh: 96, idle: 4, walk: 6, atk: 4, jump: 2, special: 6 },
+    mutant: { fw: 96, fh: 96, walk: 6, atk: 4, die: 6 },
+    // boss sheet: row0 walk/idle, row1 atk, row2 "brian cox" idle/talk
+    boss:   { fw: 192, fh: 192, idle: 4, atk: 4, die: 6, brian: 4 },
+  };
 
   // =============================
-  // CANVAS / SCALE
+  // CANVAS / RESOLUTION (portrait)
   // =============================
+  const VIRTUAL_W = 360;
+  const VIRTUAL_H = 640;
+
   const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { alpha: false });
 
-  // Render at device pixel ratio for crispness
   function resize() {
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    canvas.width  = Math.floor(window.innerWidth  * dpr);
-    canvas.height = Math.floor(window.innerHeight * dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+    canvas.width  = Math.floor(VIRTUAL_W * dpr);
+    canvas.height = Math.floor(VIRTUAL_H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false; // crisp pixels
   }
-  window.addEventListener("resize", resize, {passive:true});
+  window.addEventListener("resize", resize, { passive:true });
   resize();
 
-  // Fit BASE_W x BASE_H into viewport with letterboxing (keeps portrait)
-  function getFit() {
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const scale = Math.min(vw / BASE_W, vh / BASE_H);
-    const ox = (vw - BASE_W * scale) / 2;
-    const oy = (vh - BASE_H * scale) / 2;
-    return { scale, ox, oy };
-  }
-
-  // Helper to draw in “game coords”
-  function withGameTransform(fn) {
-    const {scale, ox, oy} = getFit();
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.scale(scale, scale);
-    fn();
-    ctx.restore();
-  }
-
   // =============================
-  // AUDIO (no files needed)
+  // UI refs
   // =============================
-  let audioCtx = null;
-  let musicOn = true;
+  const hpPill = document.getElementById("hpPill");
+  const meterPill = document.getElementById("meterPill");
+  const wavePill = document.getElementById("wavePill");
+  const scorePill = document.getElementById("scorePill");
 
-  function ensureAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === "suspended") audioCtx.resume();
-  }
+  const overlay = document.getElementById("overlay");
+  const ovTitle = document.getElementById("ovTitle");
+  const ovBody  = document.getElementById("ovBody");
+  const ovBtn   = document.getElementById("ovBtn");
 
-  function sfx(type="blip") {
-    if (!musicOn) return;
-    ensureAudio();
-    const t0 = audioCtx.currentTime;
-
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.connect(g); g.connect(audioCtx.destination);
-
-    if (type === "hit") {
-      o.type = "square";
-      o.frequency.setValueAtTime(220, t0);
-      o.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
-      g.gain.setValueAtTime(0.18, t0);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
-      o.start(t0); o.stop(t0 + 0.09);
-      return;
-    }
-
-    if (type === "hurt") {
-      o.type = "sawtooth";
-      o.frequency.setValueAtTime(180, t0);
-      o.frequency.exponentialRampToValueAtTime(60, t0 + 0.12);
-      g.gain.setValueAtTime(0.22, t0);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
-      o.start(t0); o.stop(t0 + 0.15);
-      return;
-    }
-
-    if (type === "jump") {
-      o.type = "triangle";
-      o.frequency.setValueAtTime(420, t0);
-      o.frequency.exponentialRampToValueAtTime(760, t0 + 0.07);
-      g.gain.setValueAtTime(0.10, t0);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
-      o.start(t0); o.stop(t0 + 0.1);
-      return;
-    }
-
-    if (type === "special") {
-      o.type = "square";
-      o.frequency.setValueAtTime(300, t0);
-      o.frequency.exponentialRampToValueAtTime(900, t0 + 0.18);
-      g.gain.setValueAtTime(0.18, t0);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
-      o.start(t0); o.stop(t0 + 0.23);
-      return;
-    }
-
-    // default “blip”
-    o.type = "square";
-    o.frequency.setValueAtTime(520, t0);
-    g.gain.setValueAtTime(0.09, t0);
-    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
-    o.start(t0); o.stop(t0 + 0.09);
-  }
-
-  // Simple “chiptune-ish” loop
-  let musicTimer = null;
-  function startMusic() {
-    if (!musicOn) return;
-    ensureAudio();
-    stopMusic();
-    const seq = [440, 0, 523, 0, 659, 0, 523, 0, 392, 0, 440, 0, 523, 0, 659, 0];
-    let i = 0;
-    musicTimer = setInterval(() => {
-      if (!musicOn || !audioCtx) return;
-      const f = seq[i++ % seq.length];
-      if (f === 0) return;
-      const t0 = audioCtx.currentTime;
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = "triangle";
-      o.frequency.setValueAtTime(f, t0);
-      g.gain.setValueAtTime(0.02, t0);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(t0); o.stop(t0 + 0.13);
-    }, 130);
-  }
-  function stopMusic() {
-    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
-  }
-
-  // =============================
-  // IMAGE LOADER (with fallbacks)
-  // =============================
-  function loadImage(src) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve({img, ok:true});
-      img.onerror = () => resolve({img:null, ok:false});
-      img.src = src + (src.includes("?") ? "&" : "?") + "v=" + Date.now(); // bust cache
-    });
-  }
-
-  const IMG = { bg:null, title:null, char:null, mutant:null, boss:null };
-  const IMG_OK = { bg:false, title:false, char:false, mutant:false, boss:false };
-
-  async function loadAll() {
-    const [bg,title,ch,mu,bo] = await Promise.all([
-      loadImage(ASSETS.bg),
-      loadImage(ASSETS.title),
-      loadImage(ASSETS.char),
-      loadImage(ASSETS.mutant),
-      loadImage(ASSETS.boss),
-    ]);
-    IMG.bg = bg.img; IMG_OK.bg = bg.ok;
-    IMG.title = title.img; IMG_OK.title = title.ok;
-    IMG.char = ch.img; IMG_OK.char = ch.ok;
-    IMG.mutant = mu.img; IMG_OK.mutant = mu.ok;
-    IMG.boss = bo.img; IMG_OK.boss = bo.ok;
+  function showOverlay(title, body, btnText="Continue", onClose=null){
+    ovTitle.textContent = title;
+    ovBody.textContent = body;
+    ovBtn.textContent = btnText;
+    overlay.classList.add("show");
+    ovBtn.onclick = () => {
+      overlay.classList.remove("show");
+      if (onClose) onClose();
+    };
   }
 
   // =============================
   // INPUT (touch + mouse)
   // =============================
-  const input = {
-    left:false, right:false, jump:false, attack:false, special:false, grab:false,
-    pressed: new Set(),
-  };
+  const input = { left:false, right:false, jump:false, atk:false, special:false };
+  function bindHold(btnId, key){
+    const el = document.getElementById(btnId);
+    const down = (e)=>{ e.preventDefault(); input[key]=true; userGesture(); };
+    const up   = (e)=>{ e.preventDefault(); input[key]=false; };
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("pointerleave", up);
+  }
+  bindHold("leftBtn", "left");
+  bindHold("rightBtn","right");
+  bindHold("jumpBtn", "jump");
+  bindHold("attackBtn","atk");
+  bindHold("specialBtn","special");
 
-  function setBtn(name, val) {
-    input[name] = val;
+  // =============================
+  // AUDIO (no files needed)
+  // =============================
+  let audioCtx=null, master=null, musicGain=null, sfxGain=null;
+  let muted=false, musicTimer=null, musicT=0;
+
+  function userGesture(){
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    master = audioCtx.createGain(); master.gain.value = 0.9;
+    musicGain = audioCtx.createGain(); musicGain.gain.value = 0.18;
+    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 0.40;
+    musicGain.connect(master); sfxGain.connect(master); master.connect(audioCtx.destination);
+    startMusic();
   }
 
-  // virtual buttons layout in game coords
-  function btnRects() {
-    const pad = 18;
-    const y = BASE_H - CONTROLS_H + 30;
+  function beep(freq=440, dur=0.08, type="square", vol=0.35){
+    if (!audioCtx || muted) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(sfxGain);
+    o.start();
+    o.stop(audioCtx.currentTime + dur);
+  }
+  function noise(dur=0.08, vol=0.25){
+    if (!audioCtx || muted) return;
+    const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    g.gain.value = vol;
+    src.buffer = buffer;
+    src.connect(g); g.connect(sfxGain);
+    src.start();
+  }
 
-    // left cluster
-    const leftW = 70, leftH = 70;
-    const leftX = pad;
-    const rightX = pad + leftW + 14;
+  function startMusic(){
+    if (!audioCtx) return;
+    if (musicTimer) clearInterval(musicTimer);
+    // simple chiptune loop (minor-ish vibe)
+    const seq = [
+      [196,0.18],[246.94,0.18],[293.66,0.18],[246.94,0.18],
+      [174.61,0.18],[220.00,0.18],[261.63,0.18],[220.00,0.18],
+      [196,0.18],[246.94,0.18],[293.66,0.18],[349.23,0.18],
+      [329.63,0.18],[293.66,0.18],[261.63,0.18],[220.00,0.18],
+    ];
+    musicT = 0;
+    musicTimer = setInterval(()=>{
+      if (!audioCtx || muted) return;
+      const [f,d] = seq[musicT % seq.length];
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type="square";
+      o.frequency.value=f;
+      g.gain.value=0.20;
+      o.connect(g); g.connect(musicGain);
+      o.start();
+      o.stop(audioCtx.currentTime + d);
+      musicT++;
+    }, 180);
+  }
 
-    // middle
-    const jumpW = 110, jumpH = 70;
-    const jumpX = BASE_W/2 - jumpW/2;
+  document.getElementById("muteBtn").addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    userGesture();
+    muted = !muted;
+    beep(muted?220:660, 0.07, "square", 0.30);
+    document.getElementById("muteBtn").textContent = muted ? "UNMUTE" : "MUTE";
+  });
 
-    // right cluster
-    const atkW=110, atkH=70;
-    const atkX = BASE_W - pad - atkW*2 - 14;
-    const spX  = BASE_W - pad - atkW;
+  // =============================
+  // IMAGE LOADER
+  // =============================
+  function loadImg(src){
+    return new Promise((res, rej)=>{
+      const img = new Image();
+      img.onload = ()=>res(img);
+      img.onerror = ()=>rej(new Error("Failed: " + src));
+      img.src = src + "?v=" + Date.now(); // bust GH Pages cache
+    });
+  }
 
-    // second row
-    const grabW=110, grabH=70;
-    const grabX = atkX;
-    const pickX = spX;
+  // =============================
+  // GAME STATE
+  // =============================
+  let imgs = {};
+  let state = "LOADING"; // TITLE -> PLAY -> BOSS_REVEAL -> END
+  let t0 = performance.now();
 
-    const muteW = 110, muteH=60;
-    const muteX = BASE_W/2 - muteW/2;
-    const muteY = BASE_H - CONTROLS_H + 115;
+  const world = {
+    score:0,
+    wave:1, wavesTotal:3,
+    hp:100,
+    meter:0,
+    meterMax:100,
+    noHitChain:0, // increases when hitting without taking damage
+    cameraX:0,
+    // portrait: we keep camera mostly centered and allow a little scrolling
+    bounds: { minX: 0, maxX: 900 }, // world width in virtual units
+  };
 
+  // Entities
+  const player = {
+    x: 60, y: 520, vx:0, vy:0,
+    w: 54, h: 72,
+    facing: 1,
+    onGround:true,
+    atkCooldown:0,
+    invuln:0,
+    anim: { name:"idle", frame:0, ft:0 }
+  };
+
+  function makeEnemy(x){
     return {
-      left:   {x:leftX,  y:y, w:leftW, h:leftH, label:"◀"},
-      right:  {x:rightX, y:y, w:leftW, h:leftH, label:"▶"},
-      jump:   {x:jumpX, y:y, w:jumpW, h:jumpH, label:"JUMP"},
-      attack: {x:atkX, y:y, w:atkW, h:atkH, label:"ATTACK"},
-      special:{x:spX,  y:y, w:atkW, h:atkH, label:"SPECIAL"},
-      grab:   {x:grabX,y:y+86, w:grabW,h:grabH, label:"GRAB/THROW"},
-      pick:   {x:pickX,y:y+86, w:grabW,h:grabH, label:"PICKUP"},
-      mute:   {x:muteX,y:muteY, w:muteW,h:muteH, label: musicOn ? "MUTE" : "UNMUTE"},
+      x, y: 520,
+      vx: 0,
+      w: 54, h: 72,
+      hp: 24 + 8*world.wave,
+      atkCooldown: 0,
+      anim: { name:"walk", frame:0, ft:0 },
+      alive:true
     };
   }
 
-  function hitRect(px, py, r) {
-    return (px >= r.x && px <= r.x+r.w && py >= r.y && py <= r.y+r.h);
-  }
+  let enemies = [];
+  let boss = null;
 
-  function toGameXY(clientX, clientY) {
-    const {scale, ox, oy} = getFit();
-    const gx = (clientX - ox) / scale;
-    const gy = (clientY - oy) / scale;
-    return {gx, gy};
-  }
-
-  function handlePointer(e, down) {
-    const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
-    const {gx, gy} = toGameXY(p.clientX, p.clientY);
-    const b = btnRects();
-
-    // map to actions
-    const map = [
-      ["left", b.left],
-      ["right", b.right],
-      ["jump", b.jump],
-      ["attack", b.attack],
-      ["special", b.special],
-      ["grab", b.grab],
-      ["pick", b.pick],
-      ["mute", b.mute],
-    ];
-
-    for (const [name, r] of map) {
-      if (hitRect(gx, gy, r)) {
-        if (name === "mute" && down) {
-          musicOn = !musicOn;
-          if (musicOn) startMusic(); else stopMusic();
-          sfx("blip");
-        } else {
-          setBtn(name, down);
-          if (down) {
-            ensureAudio();
-            // little click sound for actions
-            if (name === "jump") sfx("jump");
-            if (name === "attack") sfx("blip");
-            if (name === "special") sfx("blip");
-          }
-        }
-        e.preventDefault();
-        return;
-      }
+  // =============================
+  // ANIMATION HELPERS (strip-based)
+  // =============================
+  function stepAnim(a, frames, fps, dt){
+    a.ft += dt;
+    const spf = 1 / fps;
+    while (a.ft >= spf){
+      a.ft -= spf;
+      a.frame = (a.frame + 1) % frames;
     }
   }
 
-  canvas.addEventListener("touchstart", (e)=>handlePointer(e,true), {passive:false});
-  canvas.addEventListener("touchend", (e)=>{
+  function drawStrip(img, fw, fh, frame, x, y, w, h, flip=false, row=0){
+    const sx = frame * fw;
+    const sy = row * fh;
+    ctx.save();
+    ctx.translate(x + w/2, y + h/2);
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(img, sx, sy, fw, fh, -w/2, -h/2, w, h);
+    ctx.restore();
+  }
+
+  // =============================
+  // COLLISION
+  // =============================
+  function aabb(a,b){
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  // =============================
+  // SPAWNING
+  // =============================
+  function startWave(n){
+    world.wave = n;
+    wavePill.textContent = `WAVE: ${world.wave}/${world.wavesTotal}`;
+    enemies.length = 0;
+    const count = 4 + (n-1)*2;
+    for (let i=0;i<count;i++){
+      const ex = 260 + i*90;
+      enemies.push(makeEnemy(ex));
+    }
+  }
+
+  function startBoss(){
+    boss = {
+      x: 560, y: 480,
+      w: 140, h: 160,
+      hp: 180,
+      phase: "FIGHT", // FIGHT -> DYING -> BRIAN
+      atkCooldown: 0,
+      anim: { name:"idle", frame:0, ft:0 }
+    };
+  }
+
+  // =============================
+  // RENDER: background (portrait, no squish)
+  // =============================
+  function drawBackground(){
+    // draw portrait background filling canvas without distortion (cover)
+    const img = imgs.bg;
+    const cw = VIRTUAL_W, ch = VIRTUAL_H;
+    const ir = img.width / img.height;
+    const cr = cw / ch;
+
+    let dw, dh, dx, dy;
+    if (ir > cr){
+      dh = ch;
+      dw = dh * ir;
+      dx = (cw - dw)/2;
+      dy = 0;
+    } else {
+      dw = cw;
+      dh = dw / ir;
+      dx = 0;
+      dy = (ch - dh)/2;
+    }
+    ctx.drawImage(img, dx, dy, dw, dh);
+
+    // subtle vignette
+    const g = ctx.createRadialGradient(cw/2, ch*0.4, ch*0.2, cw/2, ch*0.4, ch*0.9);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,cw,ch);
+  }
+
+  function drawTitle(){
+    const img = imgs.title;
+    ctx.fillStyle = "#05060b";
+    ctx.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+
+    // cover-fit the poster image
+    const cw = VIRTUAL_W, ch = VIRTUAL_H;
+    const ir = img.width / img.height;
+    const cr = cw / ch;
+
+    let dw, dh, dx, dy;
+    if (ir > cr){
+      dh = ch;
+      dw = dh * ir;
+      dx = (cw - dw)/2;
+      dy = 0;
+    } else {
+      dw = cw;
+      dh = dw / ir;
+      dx = 0;
+      dy = (ch - dh)/2;
+    }
+    ctx.drawImage(img, dx, dy, dw, dh);
+
+    // animated PRESS START glow
+    const tt = (performance.now() - t0)/1000;
+    const pulse = 0.55 + 0.45*Math.sin(tt*3);
+    ctx.fillStyle = `rgba(0,0,0,${0.25 + 0.20*pulse})`;
+    ctx.fillRect(0, ch*0.52, cw, ch*0.10);
+
+    ctx.fillStyle = `rgba(255,255,255,${0.85})`;
+    ctx.font = "bold 14px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("TAP ANY BUTTON TO START", cw/2, ch*0.58);
+  }
+
+  // =============================
+  // GAME LOOP
+  // =============================
+  function update(dt){
+    // UI
+    hpPill.textContent = `HP: ${Math.max(0, Math.floor(world.hp))}`;
+    meterPill.textContent = `METER: ${Math.floor(world.meter)}`;
+    scorePill.textContent = `SCORE: ${world.score}`;
+
+    // TITLE: wait for input
+    if (state === "TITLE"){
+      if (input.left || input.right || input.jump || input.atk || input.special){
+        beep(660,0.08); beep(880,0.07);
+        state = "PLAY";
+        startWave(1);
+      }
+      return;
+    }
+
+    if (state === "END") return;
+
+    // PLAYER PHYSICS
+    const speed = 140;
+    player.vx = 0;
+    if (input.left)  { player.vx = -speed; player.facing = -1; }
+    if (input.right) { player.vx =  speed; player.facing =  1; }
+
+    if (player.onGround && input.jump){
+      player.vy = -310;
+      player.onGround = false;
+      beep(520,0.06); beep(780,0.04);
+    }
+
+    // gravity
+    player.vy += 900 * dt;
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+
+    // ground
+    const groundY = 540;
+    if (player.y + player.h >= groundY){
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.onGround = true;
+    }
+
+    // world bounds
+    player.x = Math.max(world.bounds.minX, Math.min(world.bounds.maxX - player.w, player.x));
+
+    // camera (keep player near center but portrait-friendly)
+    const targetCam = Math.max(0, Math.min(world.bounds.maxX - VIRTUAL_W, player.x - VIRTUAL_W*0.35));
+    world.cameraX += (targetCam - world.cameraX) * Math.min(1, dt*6);
+
+    // cooldowns
+    player.atkCooldown = Math.max(0, player.atkCooldown - dt);
+    player.invuln = Math.max(0, player.invuln - dt);
+
+    // ATTACK
+    let didHit = false;
+    if (input.atk && player.atkCooldown <= 0){
+      player.atkCooldown = 0.28;
+      beep(220,0.06); noise(0.03,0.18);
+      const hitBox = {
+        x: player.x + (player.facing>0 ? player.w : -28),
+        y: player.y + 14,
+        w: 28,
+        h: 42
+      };
+      // hit enemies
+      for (const e of enemies){
+        if (!e.alive) continue;
+        const eb = { x:e.x, y:e.y, w:e.w, h:e.h };
+        if (aabb(hitBox, eb)){
+          e.hp -= 10;
+          didHit = true;
+          world.score += 150;
+          world.meter = Math.min(world.meterMax, world.meter + 10);
+          world.noHitChain++;
+          if (e.hp <= 0){
+            e.alive = false;
+            world.score += 300;
+            beep(120,0.08,"square",0.25); noise(0.06,0.25);
+          }
+        }
+      }
+      // hit boss
+      if (boss && boss.phase==="FIGHT"){
+        const bb = { x:boss.x, y:boss.y, w:boss.w, h:boss.h };
+        if (aabb(hitBox, bb)){
+          boss.hp -= 8;
+          didHit = true;
+          world.score += 200;
+          world.meter = Math.min(world.meterMax, world.meter + 10);
+          world.noHitChain++;
+          beep(180,0.06,"square",0.24);
+          if (boss.hp <= 0){
+            boss.phase = "DYING";
+            boss.anim.frame = 0; boss.anim.ft = 0;
+            noise(0.12,0.35);
+          }
+        }
+      }
+    }
+
+    // SPECIAL: “powers up after 10 hits and no damage taken”
+    const specialReady = (world.noHitChain >= 10) && world.meter >= 100;
+    if (input.special && specialReady){
+      world.meter = 0;
+      world.noHitChain = 0;
+      // screen-clearing blast
+      beep(880,0.06); beep(1320,0.10); noise(0.10,0.35);
+      for (const e of enemies){
+        if (e.alive){ e.hp -= 999; e.alive = false; world.score += 500; }
+      }
+      if (boss && boss.phase==="FIGHT"){
+        boss.hp -= 60;
+        if (boss.hp <= 0){
+          boss.phase = "DYING";
+          boss.anim.frame = 0; boss.anim.ft = 0;
+        }
+      }
+    }
+
+    // ENEMY AI
+    for (const e of enemies){
+      if (!e.alive) continue;
+      e.atkCooldown = Math.max(0, e.atkCooldown - dt);
+
+      const dir = Math.sign((player.x) - e.x) || 1;
+      const dist = Math.abs(player.x - e.x);
+      if (dist > 56){
+        e.vx = dir * 70;
+        e.x += e.vx * dt;
+        e.anim.name = "walk";
+      } else {
+        e.vx = 0;
+        // attack
+        if (e.atkCooldown <= 0){
+          e.atkCooldown = 0.9 + Math.random()*0.4;
+          e.anim.name = "atk";
+          // damage if close
+          if (player.invuln<=0 && player.onGround){
+            world.hp -= 10;
+            player.invuln = 0.55;
+            world.noHitChain = 0; // break chain
+            beep(90,0.10,"square",0.30); noise(0.06,0.25);
+          }
+        }
+      }
+    }
+
+    // BOSS AI
+    if (boss){
+      boss.atkCooldown = Math.max(0, boss.atkCooldown - dt);
+
+      if (boss.phase === "FIGHT"){
+        const dir = Math.sign(player.x - boss.x) || -1;
+        const dist = Math.abs(player.x - boss.x);
+
+        if (dist > 90){
+          boss.x += dir * 55 * dt;
+          boss.anim.name = "idle";
+        } else {
+          if (boss.atkCooldown <= 0){
+            boss.atkCooldown = 1.1;
+            boss.anim.name = "atk";
+            if (player.invuln<=0){
+              world.hp -= 18;
+              player.invuln = 0.7;
+              world.noHitChain = 0;
+              beep(70,0.12,"square",0.33); noise(0.08,0.30);
+            }
+          }
+        }
+      }
+
+      if (boss.phase === "DYING"){
+        // after a moment, switch to BRIAN reveal
+        boss.revealT = (boss.revealT || 0) + dt;
+        if (boss.revealT > 1.2){
+          boss.phase = "BRIAN";
+          boss.anim.name = "brian";
+          boss.anim.frame = 0; boss.anim.ft = 0;
+          state = "BOSS_REVEAL";
+
+          // Two popups (as you wanted)
+          showOverlay(
+            "Professor Brian Cox",
+            "“Thanks… that was genuinely quite intense.”",
+            "Continue",
+            () => {
+              showOverlay(
+                "REWARD UNLOCKED",
+                "🎟️ TWO TICKETS 🎟️\nBrian Cox: Emergence — Live in Brighton\n\nMerry Christmas, Charlotte 🦋\n— Love you always, Nick x",
+                "Finish",
+                () => { state = "END"; }
+              );
+            }
+          );
+        }
+      }
+    }
+
+    // Wave progression
+    const aliveEnemies = enemies.some(e => e.alive);
+    if (!aliveEnemies && !boss){
+      if (world.wave < world.wavesTotal){
+        startWave(world.wave + 1);
+        beep(740,0.07); beep(880,0.07);
+      } else {
+        startBoss();
+        wavePill.textContent = `WAVE: BOSS`;
+        beep(220,0.10); beep(140,0.10);
+      }
+    }
+
+    // Game over (optional: you can ignore)
+    if (world.hp <= 0 && state !== "BOSS_REVEAL"){
+      world.hp = 0;
+      showOverlay("Game Over", "Tap to restart from the title.", "Restart", () => {
+        resetGame();
+      });
+    }
+
+    // Anim state selection
+    if (!player.onGround) player.anim.name = "jump";
+    else if (player.atkCooldown > 0.18) player.anim.name = "atk";
+    else if (Math.abs(player.vx) > 0) player.anim.name = "walk";
+    else player.anim.name = "idle";
+
+    // meter rule: only show 100 when special ready
+    if (specialReady) meterPill.textContent = "METER: 100 (READY)";
+  }
+
+  function render(){
+    // clear
+    ctx.fillStyle = "#05060b";
+    ctx.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+
+    if (state === "TITLE"){
+      drawTitle();
+      return;
+    }
+
+    // background
+    drawBackground();
+
+    // world layer (simple)
+    ctx.save();
+    ctx.translate(-world.cameraX, 0);
+
+    // Draw enemies / player / boss
+    // NOTE: if your sheet sizes differ, update SPR.* fw/fh and frame counts.
+
+    // Enemies
+    for (const e of enemies){
+      if (!e.alive) continue;
+      const a = e.anim;
+      if (a.name==="atk") stepAnim(a, SPR.mutant.atk, 12, 1/60);
+      else stepAnim(a, SPR.mutant.walk, 10, 1/60);
+
+      const flip = (player.x < e.x); // face player
+      const row = (a.name==="atk") ? 1 : 0;
+      const frame = a.frame;
+
+      drawStrip(imgs.mutant, SPR.mutant.fw, SPR.mutant.fh, frame, e.x, e.y, e.w, e.h, flip, row);
+    }
+
+    // Boss
+    if (boss){
+      const a = boss.anim;
+      if (boss.phase === "FIGHT"){
+        if (a.name==="atk") stepAnim(a, SPR.boss.atk, 10, 1/60);
+        else stepAnim(a, SPR.boss.idle, 6, 1/60);
+        const row = (a.name==="atk") ? 1 : 0;
+        drawStrip(imgs.boss, SPR.boss.fw, SPR.boss.fh, a.frame, boss.x, boss.y, boss.w, boss.h, (player.x < boss.x), row);
+      } else if (boss.phase === "DYING"){
+        // flicker
+        const flick = Math.sin(performance.now()/70) > 0 ? 0.4 : 1;
+        ctx.globalAlpha = flick;
+        drawStrip(imgs.boss, SPR.boss.fw, SPR.boss.fh, 0, boss.x, boss.y, boss.w, boss.h, false, 0);
+        ctx.globalAlpha = 1;
+      } else if (boss.phase === "BRIAN"){
+        stepAnim(a, SPR.boss.brian, 6, 1/60);
+        // brian row = 2
+        drawStrip(imgs.boss, SPR.boss.fw, SPR.boss.fh, a.frame, boss.x, boss.y, boss.w, boss.h, false, 2);
+      }
+    }
+
+    // Player
+    const pa = player.anim;
+    let frames = SPR.char.idle, row = 0, fps = 8;
+    if (pa.name==="walk"){ frames = SPR.char.walk; row = 1; fps=10; }
+    if (pa.name==="atk"){ frames = SPR.char.atk; row = 2; fps=14; }
+    if (pa.name==="jump"){ frames = SPR.char.jump; row = 3; fps=10; }
+    stepAnim(pa, frames, fps, 1/60);
+
+    // invuln blink
+    if (player.invuln > 0 && Math.sin(performance.now()/50) > 0) ctx.globalAlpha = 0.55;
+
+    drawStrip(imgs.char, SPR.char.fw, SPR.char.fh, pa.frame, player.x, player.y, player.w, player.h, (player.facing<0), row);
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+
+    // subtle “pixel scanline” overlay
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    for (let y=0;y<VIRTUAL_H;y+=3) ctx.fillRect(0,y,VIRTUAL_W,1);
+
+    // helpful hint when special ready
+    const specialReady = (world.noHitChain >= 10) && world.meter >= 100;
+    if (specialReady && state==="PLAY"){
+      ctx.fillStyle = "rgba(0,0,0,0.40)";
+      ctx.fillRect(20, 110, VIRTUAL_W-40, 34);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.font = "bold 12px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("SPECIAL READY — TAP SPECIAL", VIRTUAL_W/2, 132);
+    }
+  }
+
+  // =============================
+  // RESET
+  // =============================
+  function resetGame(){
+    world.score=0; world.wave=1; world.hp=100; world.meter=0; world.noHitChain=0;
+    world.cameraX=0;
+    player.x=60; player.y=520; player.vx=0; player.vy=0; player.onGround=true; player.atkCooldown=0; player.invuln=0;
+    enemies.length=0;
+    boss=null;
+    state="TITLE";
+    t0 = performance.now();
+  }
+
+  // =============================
+  // MAIN LOOP
+  // =============================
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.033, (now - last)/1000);
+    last = now;
+
+    if (state !== "LOADING"){
+      update(dt);
+      render();
+    } else {
+      // simple loading screen
+      ctx.fillStyle="#05060b"; ctx.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+      ctx.fillStyle="rgba(255,255,255,0.85)";
+      ctx.font="bold 14px ui-monospace, monospace";
+      ctx.textAlign="center";
+      ctx.fillText("Loading…", VIRTUAL_W/2, VIRTUAL_H/2);
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // =============================
+  // LOAD ALL ASSETS
+  // =============================
+  (async ()=>{
+    try{
+      state="LOADING";
+      const [title,bg,char,mutant,bossImg] = await Promise.all([
+        loadImg(ASSETS.title),
+        loadImg(ASSETS.bg),
+        loadImg(ASSETS.char),
+        loadImg(ASSETS.mutant),
+        loadImg(ASSETS.boss),
+      ]);
+      imgs = { title, bg, char, mutant, boss: bossImg };
+      resetGame();
+      state="TITLE";
+    } catch (e){
+      console.error(e);
+      showOverlay("Assets not loading", String(e.message || e), "Retry", ()=>location.reload());
+    }
+  })();
+})();
+</script>
+</body>
+</html>
