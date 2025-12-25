@@ -2,759 +2,318 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Charlotte vs The Dark Matter Crisis</title>
   <style>
-    :root{ --ui:#0f1220cc; --u2:#1a1f38cc; --txt:#e9f0ff; }
-    html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-    #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;}
-    canvas{image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;}
-
-    #hud{
-      position:fixed; left:0; right:0;
-      top: env(safe-area-inset-top);
-      padding:10px 10px 6px;
-      display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
-      pointer-events:none;
-      z-index:10;
+    html, body { margin:0; padding:0; height:100%; background:#05060a; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+    canvas { width:100vw; height:100vh; touch-action:none; }
+    /* soft vignette for “gamey” look */
+    #vignette { pointer-events:none; position:fixed; inset:0;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
+      mix-blend-mode: multiply;
     }
-    .pill{
-      pointer-events:none;
-      background:var(--ui);
-      border:1px solid #2a2f4d;
-      color:var(--txt);
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:700;
-      font-size:12px;
-      letter-spacing:.6px;
-      text-transform:uppercase;
-      box-shadow:0 10px 30px #00000055;
-      backdrop-filter: blur(6px);
-    }
-
-    #controls{
-      position:fixed; left:0; right:0;
-      bottom: calc(env(safe-area-inset-bottom) + 8px);
-      height: 34vh;
-      max-height: 280px;
-      min-height: 190px;
-      pointer-events:none;
-      z-index:10;
-    }
-    .btn{
-      pointer-events:auto;
-      user-select:none;
-      -webkit-user-select:none;
-      background:linear-gradient(180deg,var(--u2),var(--ui));
-      border:1px solid #2a2f4d;
-      color:var(--txt);
-      border-radius:18px;
-      font-weight:800;
-      letter-spacing:.8px;
-      text-transform:uppercase;
-      box-shadow:0 10px 30px #00000066;
-      backdrop-filter: blur(6px);
-      display:flex;align-items:center;justify-content:center;
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    #leftPad{ position:absolute; left:10px; bottom:10px; width:42%; height:70%; display:flex; gap:10px; align-items:flex-end;}
-    #rightPad{ position:absolute; right:10px; bottom:10px; width:52%; height:70%; display:grid; gap:10px; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; align-content:end;}
-    #dpad{ width:55%; height:100%; display:grid; gap:10px; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;}
-    #mute{ width:45%; height:45%; align-self:flex-start; }
-    #jump{ grid-column:1; grid-row:1; }
-    #attack{ grid-column:2; grid-row:1; }
-    #special{ grid-column:2; grid-row:2; }
-    #grab{ grid-column:1; grid-row:2; opacity:.65; }
-
-    #startOverlay{
-      position:fixed; inset:0;
-      background:radial-gradient(circle at 50% 20%, #1b1f43aa, #000 60%);
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:14px;
-      z-index:20;
-    }
-    #startCard{
-      width:min(92vw,520px);
-      background:var(--ui);
-      border:1px solid #2a2f4d;
-      border-radius:22px;
-      padding:18px 16px;
-      color:var(--txt);
-      box-shadow:0 18px 60px #000000aa;
-      backdrop-filter: blur(8px);
-      text-align:center;
-    }
-    #startTitle{font-size:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
-    #startSub{opacity:.9;font-weight:700;letter-spacing:.4px;font-size:13px;margin-bottom:10px;}
-    #startHint{opacity:.85;font-size:12px;line-height:1.45}
-    #startBtns{display:flex; gap:10px; justify-content:center; margin-top:14px;}
-    #startBtns .btn{pointer-events:auto; padding:12px 14px; border-radius:14px; min-width:140px;}
-
-    #dialog,#dialog2{
-      position:fixed; left:0; right:0;
-      top: 22vh;
-      display:none;
-      z-index:30;
-      justify-content:center;
-      padding:0 10px;
-    }
-    #dialog2{ top: 36vh; }
-    .box{
-      width:min(92vw,560px);
-      background:var(--ui);
-      border:1px solid #2a2f4d;
-      border-radius:22px;
-      padding:16px 16px;
-      color:var(--txt);
-      box-shadow:0 18px 60px #000000aa;
-      backdrop-filter: blur(8px);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size:12.5px;
-      line-height:1.55;
-      white-space:pre-wrap;
-    }
-    .actions{display:flex;justify-content:center;gap:10px;margin-top:12px;}
-    .actions .btn{padding:10px 12px;border-radius:14px;min-width:140px;}
-
-    #assetDebug{
-      position:fixed;
-      left:10px; right:10px;
-      bottom: calc(env(safe-area-inset-bottom) + 10px);
-      z-index:40;
-      display:none;
-      pointer-events:none;
-    }
-    #assetDebug .box{opacity:.95}
   </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c"></canvas></div>
-
-<div id="hud">
-  <div class="pill" id="hudTitle">CHARLOTTE VS THE DARK MATTER CRISIS</div>
-  <div class="pill" id="hudHP">HP: 100</div>
-  <div class="pill" id="hudMeter">METER: 0</div>
-  <div class="pill" id="hudStage">STAGE: HIGH STREET</div>
-  <div class="pill" id="hudWave">WAVE: 1/3</div>
-  <div class="pill" id="hudScore">SCORE: 0</div>
-</div>
-
-<div id="controls">
-  <div id="leftPad">
-    <div id="dpad">
-      <div class="btn" id="btnLeft">◀</div>
-      <div class="btn" id="btnRight">▶</div>
-      <div class="btn" style="opacity:0;pointer-events:none;"></div>
-      <div class="btn" style="opacity:0;pointer-events:none;"></div>
-    </div>
-    <div class="btn" id="mute">MUTE</div>
-  </div>
-  <div id="rightPad">
-    <div class="btn" id="jump">JUMP</div>
-    <div class="btn" id="attack">ATTACK</div>
-    <div class="btn" id="grab">GRAB/THROW</div>
-    <div class="btn" id="special">SPECIAL</div>
-  </div>
-</div>
-
-<div id="startOverlay">
-  <div id="startCard">
-    <div id="startTitle">Charlotte vs The Dark Matter Crisis</div>
-    <div id="startSub">Haywards Heath High Street</div>
-    <div id="startHint">
-      Tap <b>START</b> to begin (enables sound on mobile).<br>
-      Combo: <b>jab → jab → launcher</b> then aerial follow-ups.<br>
-      Special powers up after <b>10 hits</b> without taking damage.
-    </div>
-    <div id="startBtns">
-      <div class="btn" id="startBtn">START</div>
-      <div class="btn" id="startMuted">START (MUTED)</div>
-    </div>
-  </div>
-</div>
-
-<div id="dialog">
-  <div class="box" id="dialogText"></div>
-  <div class="actions"><div class="btn" id="dialogNext">CONTINUE</div></div>
-</div>
-
-<div id="dialog2">
-  <div class="box" id="dialogText2"></div>
-  <div class="actions"><div class="btn" id="dialogClose">CLOSE</div></div>
-</div>
-
-<div id="assetDebug">
-  <div class="box" id="assetDebugText"></div>
-</div>
+<div id="vignette"></div>
 
 <script>
-/* =========================
-   ASSET PATH FIX (GitHub Pages subfolder-safe)
-   ========================= */
-const BASE = new URL("./", window.location.href).href; // folder containing index.html
-const assetUrl = (file) => new URL("./assets/" + file + "?v=" + Date.now(), BASE).href;
-
-const ASSETS = {
-  bg: assetUrl("bg_portrait.png"),
-  char: assetUrl("charlotte.png"),
-  mut: assetUrl("mutant.png"),
-  boss: assetUrl("boss_cox.png"),
-};
-
-/* =========================
-   SPRITE GRIDS (EDIT IF NEEDED)
-   ========================= */
-const CHAR_GRID = { cols: 6, rows: 1 };
-const MUT_GRID  = { cols: 6, rows: 1 };
-const BOSS_GRID = { cols: 6, rows: 3 };
-
-const STATES = { IDLE:"idle", WALK:"walk", JUMP:"jump", ATTACK:"attack", HURT:"hurt" };
-
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
-
-let W=0,H=0,DPR=1;
-function resize(){
-  DPR = Math.min(2, window.devicePixelRatio || 1);
-  W = Math.floor(window.innerWidth);
-  H = Math.floor(window.innerHeight);
-  c.width = Math.floor(W * DPR);
-  c.height = Math.floor(H * DPR);
-  c.style.width = W+"px";
-  c.style.height = H+"px";
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* === Robust image loader + debug === */
-const assetState = { ok:[], fail:[], pending:0 };
-const dbgWrap = document.getElementById("assetDebug");
-const dbgText = document.getElementById("assetDebugText");
-
-function showAssetDebug(){
-  const lines = [];
-  lines.push(`ASSET DEBUG`);
-  lines.push(`Base: ${BASE}`);
-  lines.push(``);
-  if(assetState.fail.length){
-    lines.push(`FAILED (${assetState.fail.length}):`);
-    for(const f of assetState.fail) lines.push(`- ${f}`);
-    lines.push(``);
-    lines.push(`Fix: ensure /assets exists in the SAME folder as index.html, filenames exact, all lowercase.`);
-  } else {
-    lines.push(`Loading… ${assetState.ok.length}/${assetState.ok.length+assetState.pending}`);
-  }
-  dbgText.textContent = lines.join("\n");
-  dbgWrap.style.display = "block";
-}
-
-function loadImg(src, label){
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img._ok = false;
-  assetState.pending++;
-  img.onload = ()=>{
-    img._ok=true;
-    assetState.ok.push(label);
-    assetState.pending--;
-    if(assetState.pending===0 && assetState.fail.length===0){
-      dbgWrap.style.display = "none";
-    }
+(() => {
+  // =============================
+  // CONFIG (safe defaults)
+  // =============================
+  const ASSETS = {
+    bg:     "assets/bg.png",
+    title:  "assets/title.png",
+    char:   "assets/charlotte.png",
+    mutant: "assets/mutant.png",
+    boss:   "assets/boss.png",
   };
-  img.onerror = ()=>{
-    assetState.fail.push(label + " -> " + src);
-    assetState.pending--;
-    showAssetDebug();
-    console.warn("Failed to load", label, src);
-  };
-  img.src = src;
-  return img;
-}
 
-const BG   = loadImg(ASSETS.bg,   "bg_portrait.png");
-const CHAR = loadImg(ASSETS.char, "charlotte.png");
-const MUT  = loadImg(ASSETS.mut,  "mutant.png");
-const BOSS = loadImg(ASSETS.boss, "boss_cox.png");
+  // Base portrait “design resolution” (renders crisp & scales to device)
+  const BASE_W = 390;   // iPhone-ish
+  const BASE_H = 844;
 
-// show debug overlay if any pending after 1s (slow mobile)
-setTimeout(()=>{ if(assetState.pending>0) showAssetDebug(); }, 1000);
+  // UI layout split
+  const HUD_H = 120;        // top HUD
+  const CONTROLS_H = 210;   // bottom controls
+  const PLAY_TOP = HUD_H;
+  const PLAY_BOT = BASE_H - CONTROLS_H;
 
-/* =========================
-   AUDIO (no external assets)
-   ========================= */
-let audioCtx=null, master=null, musicGain=null, sfxGain=null;
-let muted=false, musicTimer=null, musicT=0;
+  // Movement tuning
+  const GRAVITY = 2400;
+  const FLOOR_Y = PLAY_BOT - 18;
 
-function initAudio(){
-  if(audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  master = audioCtx.createGain(); master.gain.value = 0.9; master.connect(audioCtx.destination);
-  musicGain = audioCtx.createGain(); musicGain.gain.value = 0.35; musicGain.connect(master);
-  sfxGain = audioCtx.createGain(); sfxGain.gain.value = 0.7; sfxGain.connect(master);
-}
-function beep({freq=440, dur=0.08, type="square", gain=0.12, slide=0}={}){
-  if(!audioCtx || muted) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type;
-  o.frequency.setValueAtTime(freq, t);
-  if(slide) o.frequency.linearRampToValueAtTime(freq+slide, t+dur);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(gain, t+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-  o.connect(g); g.connect(sfxGain);
-  o.start(t); o.stop(t+dur+0.02);
-}
-function noiseHit(dur=0.09, gain=0.10){
-  if(!audioCtx || muted) return;
-  const t = audioCtx.currentTime;
-  const n = audioCtx.createBufferSource();
-  const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate*dur), audioCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
-  n.buffer = buf;
-  const g = audioCtx.createGain();
-  g.gain.setValueAtTime(gain, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-  n.connect(g); g.connect(sfxGain);
-  n.start(t); n.stop(t+dur);
-}
-function startMusic(){
-  if(!audioCtx || muted || musicTimer) return;
-  const scale = [0,3,5,7,10,12];
-  const base = 110;
-  musicTimer = setInterval(()=>{
-    if(!audioCtx || muted) return;
-    const step = musicT++ % 16;
-    const note = scale[(step%8)%scale.length] + (step>7?12:0);
-    const freq = base * Math.pow(2, note/12);
-    beep({freq, dur:0.07, type:"triangle", gain:0.05, slide:(step%4===3? -20: 0)});
-    if(step%4===0) beep({freq:base/2, dur:0.06, type:"square", gain:0.05});
-  }, 120);
-}
-function stopMusic(){ if(musicTimer){ clearInterval(musicTimer); musicTimer=null; } }
+  // Game progression
+  const WAVES_TOTAL = 3;
 
-/* =========================
-   INPUT
-   ========================= */
-const keys = { left:false, right:false, jump:false, attack:false, special:false };
-function bindHold(id, k){
-  const el = document.getElementById(id);
-  const down = (e)=>{ e.preventDefault(); keys[k]=true; };
-  const up = (e)=>{ e.preventDefault(); keys[k]=false; };
-  el.addEventListener("pointerdown", down);
-  el.addEventListener("pointerup", up);
-  el.addEventListener("pointercancel", up);
-  el.addEventListener("pointerleave", up);
-}
-bindHold("btnLeft","left");
-bindHold("btnRight","right");
-bindHold("jump","jump");
-bindHold("attack","attack");
-bindHold("special","special");
+  // Special move rule: 10 hits + no damage taken during charge window
+  const SPECIAL_HITS_REQUIRED = 10;
 
-document.getElementById("mute").addEventListener("click", ()=>{
-  muted = !muted;
-  document.getElementById("mute").textContent = muted ? "UNMUTE" : "MUTE";
-  if(muted) stopMusic(); else startMusic();
-});
+  // =============================
+  // CANVAS / SCALE
+  // =============================
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
 
-/* =========================
-   HUD
-   ========================= */
-const hudHP = document.getElementById("hudHP");
-const hudMeter = document.getElementById("hudMeter");
-const hudWave = document.getElementById("hudWave");
-const hudScore = document.getElementById("hudScore");
+  // Render at device pixel ratio for crispness
+  function resize() {
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvas.width  = Math.floor(window.innerWidth  * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+  }
+  window.addEventListener("resize", resize, {passive:true});
+  resize();
 
-/* =========================
-   SPRITES
-   ========================= */
-function frameRect(img, grid, index){
-  if(!img._ok) return null;
-  const fw = Math.floor(img.width / grid.cols);
-  const fh = Math.floor(img.height / grid.rows);
-  const max = grid.cols * grid.rows - 1;
-  const i = Math.max(0, Math.min(max, index|0));
-  const col = i % grid.cols;
-  const row = Math.floor(i / grid.cols);
-  return { sx: col*fw, sy: row*fh, sw: fw, sh: fh };
-}
-function drawFallback(x,y,w,h,label="IMG"){
-  ctx.save();
-  ctx.globalAlpha = 0.7;
-  ctx.fillStyle = "#00c3ff";
-  ctx.fillRect(x,y,w,h);
-  ctx.fillStyle = "#001018";
-  ctx.font = "12px monospace";
-  ctx.fillText(label, x+6, y+16);
-  ctx.restore();
-}
-function drawSheetFrame(img, grid, frameIndex, dx, dy, dw, dh, label){
-  const r = frameRect(img, grid, frameIndex);
-  if(!r){ drawFallback(dx,dy,dw,dh,label); return; }
-  ctx.drawImage(img, r.sx, r.sy, r.sw, r.sh, dx, dy, dw, dh);
-}
-
-/* =========================
-   GAME
-   ========================= */
-const world = { groundY:0, camX:0, stageWidth:2400 };
-const player = {
-  x:180,y:0,vx:0,vy:0,facing:1,
-  hp:100,meter:0,score:0,hitsNoDamage:0,invuln:0,
-  onGround:true,state:STATES.IDLE,atkStep:0,atkTimer:0,specialReady:false
-};
-function makeEnemy(type,x){
-  return { type,x,y:0,vx:0,hp:type==="boss"?240:40,alive:true,hurtT:0,atkCD:0,facing:-1,phase:0 };
-}
-let wave=1;
-let enemies=[];
-let boss=null;
-let gameState="play";
-
-function spawnWave(n){
-  enemies=[];
-  const count=4+n*2;
-  for(let i=0;i<count;i++) enemies.push(makeEnemy("mutant", 520+i*140+Math.random()*80));
-}
-spawnWave(1);
-
-function startBoss(){
-  boss=makeEnemy("boss", world.stageWidth-380);
-  boss.phase=0;
-  gameState="boss";
-}
-
-function damageEnemy(e,dmg,knock){
-  e.hp-=dmg;
-  e.hurtT=0.18;
-  e.vx += knock*player.facing;
-  player.score += 150;
-  player.meter = Math.min(100, player.meter + 10);
-  player.hitsNoDamage++;
-  if(player.hitsNoDamage>=10) player.specialReady=true;
-  noiseHit(0.08,0.10);
-  beep({freq:220,dur:0.06,type:"square",gain:0.08,slide:120});
-  if(e.hp<=0){ e.alive=false; player.score+=400; beep({freq:110,dur:0.12,type:"triangle",gain:0.08,slide:-40}); }
-}
-function damagePlayer(dmg){
-  if(player.invuln>0) return;
-  player.hp=Math.max(0,player.hp-dmg);
-  player.invuln=0.8;
-  player.hitsNoDamage=0;
-  player.specialReady=false;
-  player.state=STATES.HURT;
-  player.vx -= 140*player.facing;
-  noiseHit(0.12,0.14);
-  beep({freq:140,dur:0.12,type:"sawtooth",gain:0.09,slide:-60});
-}
-
-const dialog = document.getElementById("dialog");
-const dialogText = document.getElementById("dialogText");
-const dialog2 = document.getElementById("dialog2");
-const dialogText2 = document.getElementById("dialogText2");
-document.getElementById("dialogNext").addEventListener("click", ()=>{
-  dialog.style.display="none";
-  dialog2.style.display="flex";
-});
-document.getElementById("dialogClose").addEventListener("click", ()=>{
-  dialog2.style.display="none";
-  gameState="end";
-});
-
-function showDialog1(){
-  dialog.style.display="flex";
-  dialogText.textContent =
-`The rift collapses. The mutants dissolve into stardust, fresh to fly.
-
-A bewildered figure steps out: Professor Brian Cox.
-
-"Thanks. That was... genuinely quite intense."`;
-}
-function showDialog2(){
-  dialog2.style.display="flex";
-  dialogText2.textContent =
-`REWARD UNLOCKED
-🎟️ TWO TICKETS 🎟️
-Brian Cox: Emergence — Live in Brighton
-
-Merry Christmas, Charlotte 🦋
-— Love you always, Nick x`;
-}
-
-/* Start */
-const startOverlay=document.getElementById("startOverlay");
-document.getElementById("startBtn").addEventListener("click", async ()=>{
-  initAudio(); try{ await audioCtx.resume(); }catch(e){}
-  muted=false; document.getElementById("mute").textContent="MUTE"; startMusic();
-  startOverlay.style.display="none";
-});
-document.getElementById("startMuted").addEventListener("click", async ()=>{
-  initAudio(); try{ await audioCtx.resume(); }catch(e){}
-  muted=true; document.getElementById("mute").textContent="UNMUTE"; stopMusic();
-  startOverlay.style.display="none";
-});
-
-let last=performance.now();
-requestAnimationFrame(function tick(now){
-  const dt=Math.min(0.033,(now-last)/1000); last=now;
-  update(dt);
-  render(now);
-  requestAnimationFrame(tick);
-});
-
-function update(dt){
-  world.groundY = Math.floor(H*0.86);
-
-  const speed=220;
-  if(gameState==="play"||gameState==="boss"){
-    let ax=0; if(keys.left) ax-=1; if(keys.right) ax+=1;
-    if(ax!==0){
-      player.facing=ax>0?1:-1;
-      player.vx=ax*speed;
-      if(player.onGround && player.state!==STATES.ATTACK && player.state!==STATES.HURT) player.state=STATES.WALK;
-    }else{
-      player.vx*=0.75;
-      if(player.onGround && player.state===STATES.WALK) player.state=STATES.IDLE;
-    }
-
-    if(keys.jump && player.onGround && player.state!==STATES.ATTACK){
-      player.vy=-520; player.onGround=false; player.state=STATES.JUMP;
-      beep({freq:560,dur:0.08,type:"triangle",gain:0.08,slide:80});
-    }
-
-    if(keys.attack && player.atkTimer<=0 && player.state!==STATES.HURT){
-      player.state=STATES.ATTACK;
-      player.atkTimer=0.22;
-      const step = player.atkStep%3; player.atkStep++;
-      if(step===0) beep({freq:420,dur:0.05,type:"square",gain:0.06,slide:40});
-      if(step===1) beep({freq:460,dur:0.05,type:"square",gain:0.06,slide:60});
-      if(step===2) beep({freq:520,dur:0.07,type:"triangle",gain:0.07,slide:120});
-    }
-
-    if(keys.special && player.specialReady && player.meter>=100){
-      player.meter=0; player.specialReady=false;
-      player.state=STATES.ATTACK; player.atkTimer=0.45;
-      for(const e of enemies) if(e.alive && Math.abs(e.x-player.x)<220) damageEnemy(e,30,220);
-      if(boss && boss.alive && Math.abs(boss.x-player.x)<260) damageEnemy(boss,24,120);
-      beep({freq:880,dur:0.14,type:"sawtooth",gain:0.08,slide:-220});
-      noiseHit(0.20,0.12);
-    }
+  // Fit BASE_W x BASE_H into viewport with letterboxing (keeps portrait)
+  function getFit() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scale = Math.min(vw / BASE_W, vh / BASE_H);
+    const ox = (vw - BASE_W * scale) / 2;
+    const oy = (vh - BASE_H * scale) / 2;
+    return { scale, ox, oy };
   }
 
-  player.atkTimer=Math.max(0,player.atkTimer-dt);
-  player.invuln=Math.max(0,player.invuln-dt);
-
-  player.vy += 1400*dt;
-  player.x  += player.vx*dt;
-  player.y  += player.vy*dt;
-
-  player.x = Math.max(40, Math.min(world.stageWidth-40, player.x));
-
-  if(player.y>=0){
-    player.y=0; player.vy=0;
-    if(!player.onGround){
-      player.onGround=true;
-      if(player.state===STATES.JUMP) player.state=(keys.left||keys.right)?STATES.WALK:STATES.IDLE;
-    }
-  }
-
-  // camera
-  const viewW=W;
-  const leftEdge=world.camX+viewW*0.35;
-  const rightEdge=world.camX+viewW*0.65;
-  if(player.x<leftEdge) world.camX-=(leftEdge-player.x);
-  if(player.x>rightEdge) world.camX+=(player.x-rightEdge);
-  world.camX=Math.max(0,Math.min(world.stageWidth-viewW, world.camX));
-
-  if(gameState==="play"){
-    updateEnemies(dt);
-    if(enemies.filter(e=>e.alive).length===0){
-      wave++;
-      if(wave<=3) spawnWave(wave);
-      else startBoss();
-    }
-  }else if(gameState==="boss"){
-    updateEnemies(dt);
-    updateBoss(dt);
-  }
-
-  hudHP.textContent = `HP: ${player.hp|0}`;
-  hudMeter.textContent = `METER: ${player.meter|0}`;
-  hudWave.textContent = `WAVE: ${Math.min(wave,3)}/3`;
-  hudScore.textContent = `SCORE: ${player.score|0}`;
-
-  if(player.hp<=0 && gameState!=="end"){
-    player.hp=100; player.score=Math.max(0,player.score-500); player.invuln=1.2;
-  }
-}
-
-function updateEnemies(dt){
-  for(const e of enemies){
-    if(!e.alive) continue;
-    const dx=player.x-e.x;
-    e.facing = dx>0?1:-1;
-
-    if(e.hurtT>0){
-      e.hurtT=Math.max(0,e.hurtT-dt);
-      e.vx*=0.92;
-    }else{
-      if(Math.abs(dx)>70){
-        e.vx=e.facing*95;
-      }else{
-        e.vx*=0.7;
-        e.atkCD-=dt;
-        if(e.atkCD<=0){
-          e.atkCD=1.1+Math.random()*0.6;
-          if(Math.abs(dx)<85) damagePlayer(8);
-        }
-      }
-    }
-    e.x += e.vx*dt;
-    e.x = Math.max(20, Math.min(world.stageWidth-20, e.x));
-
-    if(player.state===STATES.ATTACK && player.atkTimer>0){
-      const step=(player.atkStep-1)%3;
-      const reach=(step===2)?105:85;
-      const px=player.x + player.facing*reach;
-      const hit=Math.abs(e.x-px)<45;
-      if(hit && e.hurtT<=0.01){
-        const dmg=(step===2)?18:10;
-        const knock=(step===2)?220:120;
-        damageEnemy(e,dmg,knock);
-      }
-    }
-  }
-}
-
-function updateBoss(dt){
-  if(!boss || !boss.alive) return;
-  const dx=player.x-boss.x;
-  boss.facing=dx>0?1:-1;
-
-  if(boss.hurtT>0){
-    boss.hurtT=Math.max(0,boss.hurtT-dt);
-    boss.vx*=0.92;
-  }else{
-    if(Math.abs(dx)>120) boss.vx=boss.facing*85;
-    else{
-      boss.vx*=0.7;
-      boss.atkCD-=dt;
-      if(boss.atkCD<=0){
-        boss.atkCD=1.0+Math.random()*0.7;
-        if(Math.abs(dx)<140){ damagePlayer(14); noiseHit(0.18,0.16); }
-      }
-    }
-  }
-  boss.x += boss.vx*dt;
-  boss.x = Math.max(60, Math.min(world.stageWidth-60, boss.x));
-
-  if(player.state===STATES.ATTACK && player.atkTimer>0 && boss.hurtT<=0.01){
-    const px=player.x + player.facing*105;
-    if(Math.abs(boss.x-px)<70) damageEnemy(boss,8,80);
-  }
-
-  if(boss.hp<=0 && boss.phase===0){
-    boss.phase=1;
-    gameState="end";
-    showDialog1();
-    // chain to second popup
-    dialog2.style.display="none";
-    document.getElementById("dialogNext").onclick = ()=>{
-      dialog.style.display="none";
-      showDialog2();
-    };
-  }
-}
-
-function sx(wx){ return Math.floor(wx - world.camX); }
-function sy(wy){ return Math.floor(world.groundY + wy); }
-
-function animFrame(t,fps,count,offset=0){
-  const i=Math.floor((t/1000)*fps)%count;
-  return offset+i;
-}
-
-function render(now){
-  // always draw something
-  ctx.fillStyle="#060816";
-  ctx.fillRect(0,0,W,H);
-
-  if(BG._ok){
-    const iw=BG.width, ih=BG.height;
-    const scale=Math.max(W/iw, H/ih);
-    const dw=iw*scale, dh=ih*scale;
-    const dx=(W-dw)/2, dy=(H-dh)/2;
-    ctx.drawImage(BG, dx, dy, dw, dh);
-  }
-
-  const g=ctx.createRadialGradient(W/2,H*0.35,20,W/2,H*0.35,Math.max(W,H));
-  g.addColorStop(0,"#00000000"); g.addColorStop(1,"#00000088");
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-
-  // characters
-  drawPlayer(now);
-  drawEnemies(now);
-  drawBoss(now);
-}
-
-function drawPlayer(now){
-  let frame=0;
-  if(player.state===STATES.IDLE) frame=animFrame(now,6,Math.min(CHAR_GRID.cols,6),0);
-  else if(player.state===STATES.WALK) frame=animFrame(now,10,Math.min(CHAR_GRID.cols,6),0);
-  else if(player.state===STATES.JUMP) frame=Math.min(CHAR_GRID.cols*CHAR_GRID.rows-1,2);
-  else if(player.state===STATES.ATTACK) frame=Math.min(CHAR_GRID.cols*CHAR_GRID.rows-1,3);
-  else if(player.state===STATES.HURT) frame=Math.min(CHAR_GRID.cols*CHAR_GRID.rows-1,4);
-
-  const x=sx(player.x), y=sy(player.y);
-  ctx.save();
-  if(player.facing<0){
-    ctx.translate(x,0); ctx.scale(-1,1);
-    drawSheetFrame(CHAR,CHAR_GRID,frame,-28,y-64,56,64,"CHAR");
-  }else{
-    drawSheetFrame(CHAR,CHAR_GRID,frame,x-28,y-64,56,64,"CHAR");
-  }
-  ctx.restore();
-}
-
-function drawEnemies(now){
-  for(const e of enemies){
-    if(!e.alive) continue;
-    let frame=animFrame(now+e.x*3,8,Math.min(MUT_GRID.cols,6),0);
-    if(e.hurtT>0) frame=Math.min(MUT_GRID.cols*MUT_GRID.rows-1,4);
-    const x=sx(e.x), y=sy(e.y);
+  // Helper to draw in “game coords”
+  function withGameTransform(fn) {
+    const {scale, ox, oy} = getFit();
     ctx.save();
-    if(e.facing<0){
-      ctx.translate(x,0); ctx.scale(-1,1);
-      drawSheetFrame(MUT,MUT_GRID,frame,-28,y-64,56,64,"MUT");
-    }else{
-      drawSheetFrame(MUT,MUT_GRID,frame,x-28,y-64,56,64,"MUT");
-    }
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
+    fn();
     ctx.restore();
   }
-}
 
-function drawBoss(now){
-  if(!boss || !boss.alive) return;
-  const x=sx(boss.x), y=sy(boss.y);
+  // =============================
+  // AUDIO (no files needed)
+  // =============================
+  let audioCtx = null;
+  let musicOn = true;
 
-  let frame=animFrame(now,6,Math.min(BOSS_GRID.cols,6),0);
-  // (phase rows are still supported if your sheet uses them later)
-
-  ctx.save();
-  if(boss.facing<0){
-    ctx.translate(x,0); ctx.scale(-1,1);
-    drawSheetFrame(BOSS,BOSS_GRID,frame,-48,y-96,96,96,"BOSS");
-  }else{
-    drawSheetFrame(BOSS,BOSS_GRID,frame,x-48,y-96,96,96,"BOSS");
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
   }
-  ctx.restore();
-}
-</script>
-</body>
-</html>
+
+  function sfx(type="blip") {
+    if (!musicOn) return;
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+
+    if (type === "hit") {
+      o.type = "square";
+      o.frequency.setValueAtTime(220, t0);
+      o.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+      g.gain.setValueAtTime(0.18, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+      o.start(t0); o.stop(t0 + 0.09);
+      return;
+    }
+
+    if (type === "hurt") {
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(180, t0);
+      o.frequency.exponentialRampToValueAtTime(60, t0 + 0.12);
+      g.gain.setValueAtTime(0.22, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+      o.start(t0); o.stop(t0 + 0.15);
+      return;
+    }
+
+    if (type === "jump") {
+      o.type = "triangle";
+      o.frequency.setValueAtTime(420, t0);
+      o.frequency.exponentialRampToValueAtTime(760, t0 + 0.07);
+      g.gain.setValueAtTime(0.10, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+      o.start(t0); o.stop(t0 + 0.1);
+      return;
+    }
+
+    if (type === "special") {
+      o.type = "square";
+      o.frequency.setValueAtTime(300, t0);
+      o.frequency.exponentialRampToValueAtTime(900, t0 + 0.18);
+      g.gain.setValueAtTime(0.18, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+      o.start(t0); o.stop(t0 + 0.23);
+      return;
+    }
+
+    // default “blip”
+    o.type = "square";
+    o.frequency.setValueAtTime(520, t0);
+    g.gain.setValueAtTime(0.09, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+    o.start(t0); o.stop(t0 + 0.09);
+  }
+
+  // Simple “chiptune-ish” loop
+  let musicTimer = null;
+  function startMusic() {
+    if (!musicOn) return;
+    ensureAudio();
+    stopMusic();
+    const seq = [440, 0, 523, 0, 659, 0, 523, 0, 392, 0, 440, 0, 523, 0, 659, 0];
+    let i = 0;
+    musicTimer = setInterval(() => {
+      if (!musicOn || !audioCtx) return;
+      const f = seq[i++ % seq.length];
+      if (f === 0) return;
+      const t0 = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(f, t0);
+      g.gain.setValueAtTime(0.02, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.13);
+    }, 130);
+  }
+  function stopMusic() {
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  }
+
+  // =============================
+  // IMAGE LOADER (with fallbacks)
+  // =============================
+  function loadImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve({img, ok:true});
+      img.onerror = () => resolve({img:null, ok:false});
+      img.src = src + (src.includes("?") ? "&" : "?") + "v=" + Date.now(); // bust cache
+    });
+  }
+
+  const IMG = { bg:null, title:null, char:null, mutant:null, boss:null };
+  const IMG_OK = { bg:false, title:false, char:false, mutant:false, boss:false };
+
+  async function loadAll() {
+    const [bg,title,ch,mu,bo] = await Promise.all([
+      loadImage(ASSETS.bg),
+      loadImage(ASSETS.title),
+      loadImage(ASSETS.char),
+      loadImage(ASSETS.mutant),
+      loadImage(ASSETS.boss),
+    ]);
+    IMG.bg = bg.img; IMG_OK.bg = bg.ok;
+    IMG.title = title.img; IMG_OK.title = title.ok;
+    IMG.char = ch.img; IMG_OK.char = ch.ok;
+    IMG.mutant = mu.img; IMG_OK.mutant = mu.ok;
+    IMG.boss = bo.img; IMG_OK.boss = bo.ok;
+  }
+
+  // =============================
+  // INPUT (touch + mouse)
+  // =============================
+  const input = {
+    left:false, right:false, jump:false, attack:false, special:false, grab:false,
+    pressed: new Set(),
+  };
+
+  function setBtn(name, val) {
+    input[name] = val;
+  }
+
+  // virtual buttons layout in game coords
+  function btnRects() {
+    const pad = 18;
+    const y = BASE_H - CONTROLS_H + 30;
+
+    // left cluster
+    const leftW = 70, leftH = 70;
+    const leftX = pad;
+    const rightX = pad + leftW + 14;
+
+    // middle
+    const jumpW = 110, jumpH = 70;
+    const jumpX = BASE_W/2 - jumpW/2;
+
+    // right cluster
+    const atkW=110, atkH=70;
+    const atkX = BASE_W - pad - atkW*2 - 14;
+    const spX  = BASE_W - pad - atkW;
+
+    // second row
+    const grabW=110, grabH=70;
+    const grabX = atkX;
+    const pickX = spX;
+
+    const muteW = 110, muteH=60;
+    const muteX = BASE_W/2 - muteW/2;
+    const muteY = BASE_H - CONTROLS_H + 115;
+
+    return {
+      left:   {x:leftX,  y:y, w:leftW, h:leftH, label:"◀"},
+      right:  {x:rightX, y:y, w:leftW, h:leftH, label:"▶"},
+      jump:   {x:jumpX, y:y, w:jumpW, h:jumpH, label:"JUMP"},
+      attack: {x:atkX, y:y, w:atkW, h:atkH, label:"ATTACK"},
+      special:{x:spX,  y:y, w:atkW, h:atkH, label:"SPECIAL"},
+      grab:   {x:grabX,y:y+86, w:grabW,h:grabH, label:"GRAB/THROW"},
+      pick:   {x:pickX,y:y+86, w:grabW,h:grabH, label:"PICKUP"},
+      mute:   {x:muteX,y:muteY, w:muteW,h:muteH, label: musicOn ? "MUTE" : "UNMUTE"},
+    };
+  }
+
+  function hitRect(px, py, r) {
+    return (px >= r.x && px <= r.x+r.w && py >= r.y && py <= r.y+r.h);
+  }
+
+  function toGameXY(clientX, clientY) {
+    const {scale, ox, oy} = getFit();
+    const gx = (clientX - ox) / scale;
+    const gy = (clientY - oy) / scale;
+    return {gx, gy};
+  }
+
+  function handlePointer(e, down) {
+    const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    const {gx, gy} = toGameXY(p.clientX, p.clientY);
+    const b = btnRects();
+
+    // map to actions
+    const map = [
+      ["left", b.left],
+      ["right", b.right],
+      ["jump", b.jump],
+      ["attack", b.attack],
+      ["special", b.special],
+      ["grab", b.grab],
+      ["pick", b.pick],
+      ["mute", b.mute],
+    ];
+
+    for (const [name, r] of map) {
+      if (hitRect(gx, gy, r)) {
+        if (name === "mute" && down) {
+          musicOn = !musicOn;
+          if (musicOn) startMusic(); else stopMusic();
+          sfx("blip");
+        } else {
+          setBtn(name, down);
+          if (down) {
+            ensureAudio();
+            // little click sound for actions
+            if (name === "jump") sfx("jump");
+            if (name === "attack") sfx("blip");
+            if (name === "special") sfx("blip");
+          }
+        }
+        e.preventDefault();
+        return;
+      }
+    }
+  }
+
+  canvas.addEventListener("touchstart", (e)=>handlePointer(e,true), {passive:false});
+  canvas.addEventListener("touchend", (e)=>{
